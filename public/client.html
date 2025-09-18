@@ -3,12 +3,20 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>صفحة العميل</title>
-<script src="/socket.io/socket.io.js"></script>
-<script src="client.js"></script>
+<title>عميل Xhunter</title>
 </head>
 <body>
-<h1>صفحة العميل</h1>
-<p>يتم تسجيل الجهاز تلقائيًا عند التحميل.</p>
+<h1>عميل Xhunter</h1>
+<p>سيتم تشغيل client.js داخل WebContainer تلقائيًا.</p>
+
+<iframe
+    id="webcontainer-frame"
+    src="https://stackblitz.com/edit/node?embed=1&file=client.js"
+    style="width:100%; height:600px; border:none;">
+</iframe>
+
+<script>
+  console.log("تم تحميل WebContainer. client.js سيعمل داخل iframe تلقائيًا.");
+</script>
 </body>
 </html>
