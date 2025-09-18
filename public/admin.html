@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>لوحة Admin</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<h1>لوحة التحكم Admin</h1>
+<div id="devices">
+  <h2>الأجهزة المتصلة</h2>
+  <ul id="deviceList"></ul>
+</div>
+<div id="events">
+  <h2>سجل الأحداث</h2>
+  <ul id="logList"></ul>
+</div>
+<div id="commands">
+  <h2>أوامر الأجهزة</h2>
+  <select id="deviceSelect"></select>
+  <input type="text" id="commandAction" placeholder="أمر قانوني مثل getInstalledApps">
+  <input type="text" id="commandData" placeholder="بيانات JSON">
+  <button id="sendCommand">إرسال</button>
+</div>
+<script src="/socket.io/socket.io.js"></script>
+<script src="admin.js"></script>
+</body>
+</html>
