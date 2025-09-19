@@ -1,77 +1,70 @@
-/* الخلفية المتحركة */
-body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    margin: 0;
-    padding: 0;
-    color: #00ffcc;
-    background: linear-gradient(270deg, #0f111a, #141625, #0f111a);
-    background-size: 600% 600%;
-    animation: gradientBG 30s ease infinite;
+/* style.css — تصميم فخم و responsive */
+:root{
+  --accent:#00ffcc;
+  --panel-bg: rgba(6,8,15,0.78);
+  --glass: rgba(255,255,255,0.03);
 }
 
-@keyframes gradientBG {
-    0%{background-position:0% 50%}
-    50%{background-position:100% 50%}
-    100%{background-position:0% 50%}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;font-family:Inter, "Segoe UI", Arial, sans-serif;background:
+ url('https://risk.lexisnexis.com/-/media/images/government/article%20-%20ai%20success%20with%20quality%20data/article%20-%20ai%20data%20mgmt%203/ai%20success%20built%20from%20quality%20data-low%20gif.gif?h=360&iar=0&w=640&hash=2052C14FB51FA5D4E3104F191FAEBE4E') center/cover fixed no-repeat;
+ color:var(--accent);
+ -webkit-font-smoothing:antialiased;
+ -moz-osx-font-smoothing:grayscale;
 }
 
-header {
-    background-color: rgba(0,0,0,0.85);
-    padding: 15px;
-    text-align: center;
-    border-bottom: 2px solid #00ffcc;
+header{height:72px;display:flex;align-items:center;justify-content:center;background:linear-gradient(90deg, rgba(0,0,0,0.5), rgba(0,0,0,0.15));border-bottom:1px solid rgba(0,255,204,0.06)}
+header .title{font-size:20px;font-weight:700;letter-spacing:1px}
+header .title span{color:#041018;background:linear-gradient(90deg,var(--accent),#7cffd9);padding:6px 10px;border-radius:8px;margin-left:8px;font-weight:800}
+
+/* topbar */
+.topbar{display:flex;justify-content:space-between;align-items:center;padding:10px 16px;background:transparent}
+.tabs{display:flex;gap:8px}
+.tab{background:transparent;color:var(--accent);border:1px solid rgba(0,255,204,0.08);padding:8px 12px;border-radius:8px;cursor:pointer;font-weight:700}
+.tab.active{background:linear-gradient(180deg, rgba(0,255,204,0.07), rgba(0,255,204,0.02));box-shadow:0 6px 18px rgba(0,255,204,0.03)}
+.controls{display:flex;gap:18px;align-items:center;font-size:13px}
+.controls .status, .controls .last{background:var(--panel-bg);padding:8px;border-radius:8px;border:1px solid rgba(0,255,204,0.04)}
+
+/* main layout */
+#main{display:grid;grid-template-columns:1fr;gap:12px;padding:12px;align-items:start}
+.panel{background:var(--panel-bg);border-radius:10px;padding:12px;border:1px solid rgba(0,255,204,0.06);box-shadow:0 10px 40px rgba(0,0,0,0.6)}
+#map{width:100%;height:560px;border-radius:8px;overflow:hidden}
+
+/* lists */
+.list{list-style:none;padding:0;margin:0;max-height:420px;overflow:auto}
+.list li{padding:10px;border-bottom:1px dashed rgba(0,255,204,0.04);display:flex;justify-content:space-between;align-items:center}
+.list li .meta{font-size:12px;color:#cfffec}
+
+/* forms/buttons */
+.form-row{margin:8px 0;display:flex;gap:8px}
+.full{width:100%;padding:10px;border-radius:8px;border:1px solid rgba(0,255,204,0.06);background:transparent;color:var(--accent)}
+.primary{background:var(--accent);color:#001219;padding:10px;border-radius:8px;border:none;font-weight:800;cursor:pointer}
+.secondary{background:transparent;color:var(--accent);padding:8px;border-radius:8px;border:1px solid rgba(0,255,204,0.06);cursor:pointer}
+
+/* device info */
+#deviceInfo{white-space:pre-wrap;font-size:14px;line-height:1.5;}
+
+/* log */
+#logList li{font-size:13px;color:#d3fff0}
+
+/* radar/pulse classes (SVG circle style) */
+.radar-circle { stroke: rgba(255,77,77,0.9); fill: rgba(255,77,77,0.12); stroke-width:2; }
+.pulse { animation: pulse 1400ms infinite; transform-origin:center center; }
+@keyframes pulse { 0%{transform:scale(0.7);opacity:0.9} 70%{transform:scale(1.35);opacity:0.25} 100%{transform:scale(1.6);opacity:0} }
+
+/* footer */
+.footer{padding:10px;text-align:center;color:rgba(255,255,255,0.6)}
+
+/* responsiveness */
+@media(min-width: 1000px){
+  #main{grid-template-columns: 360px 1fr 360px}
+  #map{grid-column:2/3;grid-row:1/4}
+  #tab-devices{grid-column:1/2}
+  #tab-data{grid-column:3/4}
+  #tab-logs{grid-column:1/2}
+  #tab-commands{grid-column:3/4}
 }
-
-h1 { margin:0; font-size: 1.8em; color:#00ffcc; }
-
-#mainContainer {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 15px;
-    padding: 15px;
+@media(max-width:999px){
+  header .title{font-size:16px}
+  #map{height:420px}
 }
-
-section {
-    flex: 1 1 300px;
-    padding: 15px;
-    border: 1px solid #00ffcc;
-    border-radius: 10px;
-    background-color: rgba(18,20,41,0.9);
-}
-
-h2 { margin-top:0; color: #00e6b8; }
-
-ul { list-style: none; padding-left:0; max-height:200px; overflow-y:auto; }
-
-li { padding: 8px; border-bottom: 1px solid #00ffcc44; display:flex; justify-content:space-between; align-items:center; }
-
-button {
-    padding: 6px 10px;
-    margin: 2px;
-    background-color: #00ffcc;
-    color: #0f111a;
-    border: none;
-    border-radius: 5px;
-    cursor: pointer;
-}
-
-button:hover { background-color:#00e6b8; }
-
-select, input[type=text] {
-    padding: 6px;
-    margin: 2px;
-    border-radius:5px;
-    border:1px solid #00ffcc;
-    background-color:#0f111a;
-    color:#00ffcc;
-}
-
-.commandRow {
-    display: flex;
-    flex-wrap: wrap;
-    gap:5px;
-}
-
-/* الخريطة */
-#mapSection { flex-basis: 100%; }
-#map { width: 100%; height: 400px; border-radius:10px; border:1px solid #00ffcc; }
