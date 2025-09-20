@@ -362,6 +362,67 @@
             width: 0%;
             transition: width 0.3s ease;
         }
+        
+        /* تخصيصات إضافية */
+        .loading {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+        }
+        
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: var(--accent);
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .notification {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            padding: 15px;
+            background: var(--primary);
+            border: 1px solid var(--accent);
+            border-radius: 5px;
+            box-shadow: var(--glow);
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.3s ease;
+            transform: translateY(-100px);
+            opacity: 0;
+        }
+        
+        .notification.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+        
+        .notification.error {
+            border-color: var(--danger);
+        }
+        
+        .notification.success {
+            border-color: var(--success);
+        }
+        
+        .notification .close {
+            background: none;
+            border: none;
+            color: var(--text);
+            font-size: 1.2rem;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -434,14 +495,24 @@
             <div class="progress-bar">
                 <div class="progress" id="devicesProgress" style="width: 75%"></div>
             </div>
-            <div id="deviceList" class="list" style="margin-top: 1.5rem;"></div>
+            <div id="deviceList" class="list" style="margin-top: 1.5rem;">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <span style="margin-right: 10px;">جاري تحميل البيانات...</span>
+                </div>
+            </div>
         </section>
 
         <!-- بيانات الجهاز المحدد -->
         <section id="tab-data" class="panel">
             <h3><i class="fas fa-database"></i> بيانات الجهاز</h3>
             <p>اختر جهازاً من تبويب "الأجهزة" لعرض بياناته</p>
-            <div id="deviceInfo" class="data-grid" style="margin-top: 1.5rem;"></div>
+            <div id="deviceInfo" class="data-grid" style="margin-top: 1.5rem;">
+                <div class="data-card">
+                    <h4><i class="fas fa-info-circle"></i> معلومات الجهاز</h4>
+                    <p>لم يتم اختيار أي جهاز بعد</p>
+                </div>
+            </div>
         </section>
 
         <!-- السجل -->
@@ -450,7 +521,12 @@
             <div class="progress-bar">
                 <div class="progress" id="logsProgress" style="width: 60%"></div>
             </div>
-            <div class="list" id="logList" style="margin-top: 1.5rem;"></div>
+            <div class="list" id="logList" style="margin-top: 1.5rem;">
+                <div class="loading">
+                    <div class="spinner"></div>
+                    <span style="margin-right: 10px;">جاري تحميل السجلات...</span>
+                </div>
+            </div>
         </section>
 
         <!-- الأوامر -->
@@ -497,14 +573,21 @@
         </section>
     </main>
 
+    <div id="notification" class="notification">
+        <div id="notificationMessage"></div>
+        <button class="close" onclick="hideNotification()">
+            <i class="fas fa-times"></i>
+        </button>
+    </div>
+
     <footer class="footer">
         <i class="fas fa-shield-alt"></i> Xhunter • لوحة الاستخبارات — جاهز للعمل
     </footer>
 
-    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://cdn.socket.io/4.5.0/socket.io.min.js"></script>
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script>
-        // عناصر DOM
+         عناصر DOM
         const tabs = document.querySelectorAll('.tab');
         const panels = document.querySelectorAll('.panel');
         const statusCount = document.getElementById('statusCount');
@@ -522,60 +605,64 @@
         const refreshMapBtn = document.getElementById('refreshMap');
         const zoomInBtn = document.getElementById('zoomIn');
         const zoomOutBtn = document.getElementById('zoomOut');
+        const notification = document.getElementById('notification');
+        const notificationMessage = document.getElementById('notificationMessage');
 
-        // بيانات التطبيق
+        بيانات التطبيق
         let devices = [];
         let map = null;
         let markers = {};
         let selectedDevice = null;
+        let socket = null;
+        let isConnected = false;
 
-        // تهيئة الخريطة
+        وظائف الإشعارات
+        function showNotification(message, type = '') {
+            notificationMessage.textContent = message;
+            notification.className = 'notification';
+            if (type) {
+                notification.classList.add(type);
+            }
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                hideNotification();
+            }, 5000);
+        }
+        
+        function hideNotification() {
+            notification.classList.remove('show');
+        }
+
+        تهيئة الخريطة
         function initMap() {
             map = L.map('map').setView([24.0, 45.0], 5);
             
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
                 attribution: '&copy; OpenStreetMap contributors'
             }).addTo(map);
-            
-            // إضافة بعض النقاط الوهمية للعرض
-            addMockData();
         }
 
-        // إضافة بيانات وهمية للعرض (ستتم إزالتها عند التكامل مع الخلفية الحقيقية)
-        function addMockData() {
-            const mockDevices = [
-                { id: 'dev-001', name: 'جهاز أحمد', lat: 24.7136, lng: 46.6753, lastSeen: '2023-07-15 14:30' },
-                { id: 'dev-002', name: 'جهاز محمد', lat: 21.5433, lng: 39.1728, lastSeen: '2023-07-15 13:45' },
-                { id: 'dev-003', name: 'جهاز سارة', lat: 26.4207, lng: 50.0888, lastSeen: '2023-07-15 12:20' }
-            ];
-            
-            mockDevices.forEach(device => {
-                const marker = L.marker([device.lat, device.lng]).addTo(map)
-                    .bindPopup(`<b>${device.name}</b><br>آخر ظهور: ${device.lastSeen}`);
-                
-                markers[device.id] = marker;
-            });
-            
-            // تحديث واجهة الأجهزة
-            updateDeviceList(mockDevices);
-            updateDeviceSelect(mockDevices);
-        }
-
-        // تحديث قائمة الأجهزة
-        function updateDeviceList(devices) {
+        تحديث قائمة الأجهزة
+        function updateDeviceList(devicesData) {
             deviceList.innerHTML = '';
             
-            devices.forEach(device => {
+            if (devicesData.length === 0) {
+                deviceList.innerHTML = '<div class="device-card">لا توجد أجهزة متصلة</div>';
+                return;
+            }
+            
+            devicesData.forEach(device => {
                 const li = document.createElement('div');
                 li.className = 'device-card';
                 li.innerHTML = `
                     <div class="device-header">
-                        <div class="device-name">${device.name}</div>
+                        <div class="device-name">${device.name || 'جهاز غير معروف'}</div>
                         <div class="device-id">${device.id}</div>
                     </div>
                     <div class="device-details">
-                        <div><i class="fas fa-clock"></i> آخر ظهور: ${device.lastSeen}</div>
-                        <div><i class="fas fa-map-marker-alt"></i> الموقع: ${device.lat.toFixed(4)}, ${device.lng.toFixed(4)}</div>
+                        <div><i class="fas fa-clock"></i> آخر ظهور: ${new Date(device.lastSeen).toLocaleString('ar-SA')}</div>
+                        <div><i class="fas fa-map-marker-alt"></i> الموقع: ${device.lat ? device.lat.toFixed(4) : 'N/A'}, ${device.lng ? device.lng.toFixed(4) : 'N/A'}</div>
                         <div><i class="fas fa-satellite"></i> الحالة: متصل</div>
                     </div>
                 `;
@@ -589,65 +676,92 @@
             });
         }
 
-        // تحديث قائمة اختيار الأجهزة
-        function updateDeviceSelect(devices) {
+        تحديث قائمة اختيار الأجهزة
+        function updateDeviceSelect(devicesData) {
             deviceSelect.innerHTML = '<option value="">-- اختر جهاز --</option>';
             
-            devices.forEach(device => {
+            devicesData.forEach(device => {
                 const option = document.createElement('option');
                 option.value = device.id;
-                option.textContent = `${device.name} (${device.id})`;
+                option.textContent = `${device.name || 'جهاز غير معروف'} (${device.id})`;
                 deviceSelect.appendChild(option);
             });
         }
 
-        // اختيار جهاز
+         تحديث الخريطة
+        function updateMap(devicesData) {
+             إزالة العلامات القديمة
+            for (const id in markers) {
+                map.removeLayer(markers[id]);
+            }
+            markers = {};
+            
+            إضافة العلامات الجديدة
+            devicesData.forEach(device => {
+                if (device.lat && device.lng) {
+                    const marker = L.marker([device.lat, device.lng]).addTo(map)
+                        .bindPopup(`<b>${device.name || 'جهاز غير معروف'}</b><br>آخر ظهور: ${new Date(device.lastSeen).toLocaleString('ar-SA')}`);
+                    
+                    markers[device.id] = marker;
+                }
+            });
+            
+            ضبط عرض الخريطة ليشمل كل العلامات
+            if (Object.keys(markers).length > 0) {
+                const markerGroup = new L.featureGroup(Object.values(markers));
+                map.fitBounds(markerGroup.getBounds().pad(0.1));
+            }
+        }
+
+         اختيار جهاز
         function selectDevice(device) {
             selectedDevice = device;
             
-            // عرض بيانات الجهاز
+            عرض بيانات الجهاز
             deviceInfo.innerHTML = `
                 <div class="data-card">
                     <h4><i class="fas fa-info-circle"></i> معلومات الأساسية</h4>
-                    <p><strong>اسم الجهاز:</strong> ${device.name}</p>
+                    <p><strong>اسم الجهاز:</strong> ${device.name || 'غير معروف'}</p>
                     <p><strong>المعرف:</strong> ${device.id}</p>
-                    <p><strong>آخر ظهور:</strong> ${device.lastSeen}</p>
+                    <p><strong>آخر ظهور:</strong> ${new Date(device.lastSeen).toLocaleString('ar-SA')}</p>
+                    <p><strong>نظام التشغيل:</strong> ${device.os || 'غير معروف'}</p>
                 </div>
                 
                 <div class="data-card">
                     <h4><i class="fas fa-map-marked-alt"></i> الموقع</h4>
-                    <p><strong>الإحداثيات:</strong> ${device.lat.toFixed(6)}, ${device.lng.toFixed(6)}</p>
-                    <p><strong>الدقة:</strong> ≈ 50 متر</p>
+                    <p><strong>الإحداثيات:</strong> ${device.lat ? device.lat.toFixed(6) : 'N/A'}, ${device.lng ? device.lng.toFixed(6) : 'N/A'}</p>
+                    <p><strong>الدقة:</strong> ≈ ${device.accuracy || 'غير معروف'} متر</p>
+                    ${device.address ? `<p><strong>العنوان:</strong> ${device.address}</p>` : ''}
                 </div>
                 
                 <div class="data-card">
                     <h4><i class="fas fa-chart-line"></i> الإحصائيات</h4>
-                    <p><strong>عدد الجهات:</strong> 124</p>
-                    <p><strong>الرسائل:</strong> 542</p>
-                    <p><strong>المكالمات:</strong> 78</p>
+                    <p><strong>عدد الجهات:</strong> ${device.contactsCount || 'غير معروف'}</p>
+                    <p><strong>الرسائل:</strong> ${device.smsCount || 'غير معروف'}</p>
+                    <p><strong>المكالمات:</strong> ${device.callsCount || 'غير معروف'}</p>
                 </div>
             `;
             
-            // توجيه الخريطة إلى موقع الجهاز
-            if (map && markers[device.id]) {
+            توجيه الخريطة إلى موقع الجهاز
+            if (map && device.lat && device.lng && markers[device.id]) {
                 map.setView([device.lat, device.lng], 15);
                 markers[device.id].openPopup();
             }
         }
 
-        // تبديل التبويبات
+        تبديل التبويبات
         function switchTab(tabName) {
-            // إخفاء جميع الألواح
+             إخفاء جميع الألواح
             panels.forEach(panel => panel.classList.remove('active'));
             tabs.forEach(tab => tab.classList.remove('active'));
             
-            // إظهار اللوح المحدد
+            إظهار اللوح المحدد
             document.getElementById(`tab-${tabName}`).classList.add('active');
             
-            // تفعيل الزر المحدد
+            تفعيل الزر المحدد
             document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
             
-            // إذا كانت الخريطة، نحدثها
+             إذا كانت الخريطة، نحدثها
             if (tabName === 'map' && map) {
                 setTimeout(() => {
                     map.invalidateSize();
@@ -655,18 +769,26 @@
             }
         }
 
-        // إضافة سجل جديد
+        إضافة سجل جديد
         function addLog(message, type = 'info') {
+             إذا كان السجل لا يزال يعرض تحميل، نزيله
+            if (logList.querySelector('.loading')) {
+                logList.innerHTML = '';
+            }
+            
             const logEntry = document.createElement('div');
             logEntry.className = 'device-card';
             
             const icon = type === 'error' ? 'exclamation-circle' : 
                         type === 'success' ? 'check-circle' : 'info-circle';
             
+            const colorClass = type === 'error' ? 'style="color: var(--danger)"' : 
+                             type === 'success' ? 'style="color: var(--success)"' : '';
+            
             logEntry.innerHTML = `
                 <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <i class="fas fa-${icon} ${type === 'error' ? 'text-danger' : type === 'success' ? 'text-success' : ''}"></i>
-                    <span>${new Date().toLocaleTimeString()}</span>
+                    <i class="fas fa-${icon}" ${colorClass}></i>
+                    <span>${new Date().toLocaleTimeString('ar-SA')}</span>
                 </div>
                 <div style="margin-top: 0.5rem;">${message}</div>
             `;
@@ -674,54 +796,100 @@
             logList.appendChild(logEntry);
             logList.scrollTop = logList.scrollHeight;
             
-            // تحديث آخر حدث
-            lastEvent.textContent = new Date().toLocaleString();
+            تحديث آخر حدث
+            lastEvent.textContent = new Date().toLocaleString('ar-SA');
         }
 
-        // محاكاة اتصال WebSocket (سيتم استبداله بالاتصال الحقيقي)
-        function simulateWebSocket() {
-            // تحديث عدد الأجهزة بشكل عشوائي بين 0 و 5
-            const count = Math.floor(Math.random() * 6);
-            statusCount.textContent = count;
-            
-            if (count > 0) {
-                statusIndicator.classList.add('connected');
-                statusIndicator.querySelector('i').className = 'fas fa-plug connected';
-            } else {
-                statusIndicator.classList.remove('connected');
-                statusIndicator.querySelector('i').className = 'fas fa-plug';
-            }
-            
-            // إضافة سجل عشوائي كل 10 ثواني
-            if (Math.random() > 0.7) {
-                const messages = [
-                    'تم استلام بيانات الموقع من الجهاز dev-001',
-                    'جهاز جديد متصل: dev-004',
-                    'تم تنفيذ الأمر getContacts على الجهاز dev-002',
-                    'فشل في الاتصال بالجهاز dev-003'
-                ];
+        الاتصال بالخادم
+        function connectToServer() {
+            try {
+                socket = io('https://xhunter-1-2not.onrender.com', {
+                    transports: ['websocket'],
+                    timeout: 10000
+                });
                 
-                const types = ['info', 'info', 'success', 'error'];
-                const index = Math.floor(Math.random() * messages.length);
+                socket.on('connect', () => {
+                    isConnected = true;
+                    statusIndicator.classList.add('connected');
+                    statusIndicator.querySelector('i').className = 'fas fa-plug connected';
+                    showNotification('تم الاتصال بالخادم بنجاح', 'success');
+                    addLog('تم الاتصال بالخادم بنجاح', 'success');
+                    
+                     طلب بيانات الأجهزة بعد الاتصال
+                    socket.emit('getDevices');
+                });
                 
-                addLog(messages[index], types[index]);
+                socket.on('disconnect', () => {
+                    isConnected = false;
+                    statusIndicator.classList.remove('connected');
+                    statusIndicator.querySelector('i').className = 'fas fa-plug';
+                    showNotification('تم قطع الاتصال بالخادم', 'error');
+                    addLog('تم قطع الاتصال بالخادم', 'error');
+                });
+                
+                socket.on('connect_error', (error) => {
+                    console.error('خطأ في الاتصال:', error);
+                    showNotification('فشل في الاتصال بالخادم', 'error');
+                    addLog('فشل في الاتصال بالخادم: ' + error.message, 'error');
+                });
+                
+                socket.on('devices', (devicesData) => {
+                    devices = devicesData;
+                    statusCount.textContent = devices.length;
+                    updateDeviceList(devices);
+                    updateDeviceSelect(devices);
+                    updateMap(devices);
+                    addLog(`تم استقبال بيانات ${devices.length} جهاز`, 'success');
+                });
+                
+                socket.on('deviceData', (data) => {
+                    addLog(`تم استقبال بيانات من الجهاز ${data.deviceId}: ${data.type}`, 'success');
+                    
+                     تحديث بيانات الجهاز المحدد إذا كان معروضًا
+                    if (selectedDevice && selectedDevice.id === data.deviceId) {
+                        selectDevice({...selectedDevice, ...data.data});
+                    }
+                });
+                
+                socket.on('commandResult', (result) => {
+                    commandStatus.style.display = 'none';
+                    if (result.success) {
+                        addLog(`تم تنفيذ الأمر بنجاح: ${result.message}`, 'success');
+                        showNotification(`تم تنفيذ الأمر بنجاح: ${result.message}`, 'success');
+                    } else {
+                        addLog(`فشل في تنفيذ الأمر: ${result.message}`, 'error');
+                        showNotification(`فشل في تنفيذ الأمر: ${result.message}`, 'error');
+                    }
+                });
+                
+                socket.on('error', (error) => {
+                    addLog(`خطأ: ${error.message}`, 'error');
+                    showNotification(`خطأ: ${error.message}`, 'error');
+                });
+                
+                socket.on('log', (log) => {
+                    addLog(log.message, log.type || 'info');
+                });
+                
+            } catch (error) {
+                console.error('خطأ في تهيئة الاتصال:', error);
+                showNotification('حدث خطأ أثناء الاتصال بالخادم', 'error');
+                addLog('حدث خطأ أثناء الاتصال بالخادم: ' + error.message, 'error');
             }
         }
 
-        // تهيئة التطبيق
+         تهيئة التطبيق
         function initApp() {
-            // تهيئة الخريطة
+            تهيئة الخريطة
             initMap();
             
-            // إضافة بعض السجلات الأولية
-            addLog('تم تحميل لوحة التحكم بنجاح', 'success');
-            addLog('جاري البحث عن أجهزة متصلة...');
+             إضافة بعض السجلات الأولية
+            addLog('جاري الاتصال بالخادم...');
             
-            // محاكاة اتصال WebSocket
-            setInterval(simulateWebSocket, 5000);
-            simulateWebSocket();
+            الاتصال بالخادم
+            connectToServer();
             
-            // أحداث الأزرار
+            أحداث الأزرار
             tabs.forEach(tab => {
                 tab.addEventListener('click', () => {
                     switchTab(tab.dataset.tab);
@@ -735,16 +903,33 @@
                 
                 if (!deviceId) {
                     addLog('يرجى اختيار جهاز أولاً', 'error');
+                    showNotification('يرجى اختيار جهاز أولاً', 'error');
+                    return;
+                }
+                
+                if (!isConnected) {
+                    addLog('غير متصل بالخادم', 'error');
+                    showNotification('غير متصل بالخادم', 'error');
                     return;
                 }
                 
                 commandStatus.style.display = 'block';
                 
-                // محاكاة إرسال الأمر
-                setTimeout(() => {
+                try {
+                    const command = {
+                        deviceId: deviceId,
+                        action: action,
+                        data: data ? JSON.parse(data) : {}
+                    };
+                    
+                    socket.emit('sendCommand', command);
+                    addLog(`تم إرسال الأمر ${action} إلى الجهاز ${deviceId}`);
+                    
+                } catch (error) {
                     commandStatus.style.display = 'none';
-                    addLog(`تم إرسال الأمر ${action} إلى الجهاز ${deviceId}`, 'success');
-                }, 2000);
+                    addLog('خطأ في صيغة JSON', 'error');
+                    showNotification('خطأ في صيغة JSON', 'error');
+                }
             });
             
             clearLogsBtn.addEventListener('click', () => {
@@ -757,6 +942,11 @@
                     map.invalidateSize();
                     addLog('تم تحديث الخريطة');
                 }
+                
+                if (isConnected) {
+                    socket.emit('getDevices');
+                    addLog('جاري تحديث بيانات الأجهزة...');
+                }
             });
             
             zoomInBtn.addEventListener('click', () => {
@@ -768,8 +958,8 @@
             });
         }
 
-        // بدء التطبيق عند تحميل الصفحة
+         بدء التطبيق عند تحميل الصفحة
         document.addEventListener('DOMContentLoaded', initApp);
     </script>
 </body>
-                  </html>
+</html>
