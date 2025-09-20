@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+٩<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="utf-8" />
@@ -469,27 +469,35 @@
             showNotification('تم مسح السجل', 'success');
         });
 
-        const commandLogs = document.getElementById('commandLogs');
-        document.getElementById('sendCommand').addEventListener('click', () => {
-            const deviceId = document.getElementById('selectedDeviceInput').value;
-            const action = document.getElementById('commandAction').value;
-            let data = {};
-            try {
-                data = document.getElementById('commandData').value ? JSON.parse(document.getElementById('commandData').value) : {};
-            } catch(e) {
-                showNotification('بيانات JSON غير صحيحة', 'danger');
-                return;
-            }
-            if(!deviceId || !action) {
-                showNotification('اختر الجهاز وأدخل الأمر', 'warning');
-                return;
-            }
-            const logItem = document.createElement('li');
-            logItem.textContent = `تم إرسال الأمر "${action}" إلى ${deviceId} مع البيانات: ${JSON.stringify(data)}`;
-            commandLogs.appendChild(logItem);
-        });
+        const deviceList = document.getElementById('deviceList');
+devices.forEach(dev => {
+    const li = document.createElement('li');
+    li.className = 'device-card';
+    li.innerHTML = `
+        <div class="device-header">
+            <span class="device-name">${dev.name}</span>
+            <span class="status connected"></span>
+        </div>
+        <div class="device-info">
+            <p>ID: ${dev.id}</p>
+            <p>Lat: ${dev.lat}, Lng: ${dev.lng}</p>
+        </div>
+        <div class="device-actions">
+            <button class="primary" onclick="sendCommandToDevice('${dev.id}','restart')">Restart</button>
+            <button class="primary" onclick="sendCommandToDevice('${dev.id}','lock')">Lock</button>
+            <button class="primary" onclick="sendCommandToDevice('${dev.id}','getLocation')">Get Location</button>
+            <button class="primary" onclick="sendCommandToDevice('${dev.id}','screenshot')">Screenshot</button>
+        </div>
+    `;
+    deviceList.appendChild(li);
+});
 
-        document.getElementById('refreshMapBtn').addEventListener('click', () => updateMap(devices));
+function sendCommandToDevice(deviceId, action) {
+    const logItem = document.createElement('li');
+    logItem.textContent = `تم إرسال الأمر "${action}" إلى ${deviceId}`;
+    commandLogs.appendChild(logItem);
+    showNotification(`تم إرسال الأمر "${action}" إلى ${deviceId}`, 'info');
+}
     </script>
 </body>
 </html>
